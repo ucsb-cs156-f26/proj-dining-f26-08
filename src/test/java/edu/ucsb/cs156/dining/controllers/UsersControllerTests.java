@@ -2,6 +2,7 @@ package edu.ucsb.cs156.dining.controllers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -29,6 +30,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MvcResult;
@@ -422,5 +425,27 @@ public class UsersControllerTests extends ControllerTestCase {
         .findByStatusAndProposedAliasNotNull(ModerationStatus.AWAITING_REVIEW);
 
     assertEquals(expectedJson, response.getResponse().getContentAsString());
+  }
+
+  @Test
+  @WithMockUser(roles = {"ADMIN"})
+  public void admin_can_get_paged_users() throws Exception {
+    User user = User.builder().id(1L).email("user@example.org").build();
+
+    UserDTO dto = new UserDTO(user, false, false);
+
+    when(userDataDTOService.getUserDataDTOs(any(Pageable.class)))
+        .thenReturn(new PageImpl<>(List.of(dto)));
+
+    mockMvc
+        .perform(get("/api/admin/users/paged").param("page", "0").param("size", "5"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content[0].id").value(1))
+        .andExpect(jsonPath("$.totalElements").value(1));
+
+    verify(userDataDTOService)
+        .getUserDataDTOs(
+            org.mockito.ArgumentMatchers.argThat(
+                p -> p.getPageNumber() == 0 && p.getPageSize() == 5));
   }
 }
