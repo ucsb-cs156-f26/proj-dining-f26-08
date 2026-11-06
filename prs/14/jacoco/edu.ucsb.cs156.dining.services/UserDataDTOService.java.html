@@ -26,18 +26,18 @@ import org.springframework.stereotype.Service;
   private String adminEmails;
 
   public Page&lt;UserDTO&gt; getUserDataDTOs(Pageable pageable) {
-<span class="nc" id="L29">    List&lt;String&gt; configuredAdmins = Arrays.asList(adminEmails.split(&quot;,&quot;));</span>
+<span class="fc" id="L29">    List&lt;String&gt; configuredAdmins = Arrays.asList(adminEmails.split(&quot;,&quot;));</span>
 
-<span class="nc" id="L31">    Page&lt;User&gt; users = userRepository.findAll(pageable);</span>
+<span class="fc" id="L31">    Page&lt;User&gt; users = userRepository.findAll(pageable);</span>
 
-<span class="nc" id="L33">    return users.map(</span>
+<span class="fc" id="L33">    return users.map(</span>
         user -&gt; {
-<span class="nc" id="L35">          String email = user.getEmail();</span>
-<span class="nc" id="L36">          boolean isAdmin =</span>
-<span class="nc bnc" id="L37" title="All 4 branches missed.">              configuredAdmins.contains(email) || adminRepository.existsByEmail(email);</span>
-<span class="nc" id="L38">          boolean isModerator = moderatorRepository.existsByEmail(email);</span>
+<span class="fc" id="L35">          String email = user.getEmail();</span>
+<span class="fc" id="L36">          boolean isAdmin =</span>
+<span class="fc bfc" id="L37" title="All 4 branches covered.">              configuredAdmins.contains(email) || adminRepository.existsByEmail(email);</span>
+<span class="fc" id="L38">          boolean isModerator = moderatorRepository.existsByEmail(email);</span>
 
-<span class="nc" id="L40">          return new UserDTO(user, isAdmin, isModerator);</span>
+<span class="fc" id="L40">          return new UserDTO(user, isAdmin, isModerator);</span>
         });
   }
 }

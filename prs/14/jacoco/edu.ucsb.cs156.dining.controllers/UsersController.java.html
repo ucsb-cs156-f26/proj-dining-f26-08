@@ -159,7 +159,7 @@ import org.springframework.web.server.ResponseStatusException;
   @PreAuthorize(&quot;hasRole('ROLE_ADMIN')&quot;)
   @GetMapping(&quot;/admin/users/paged&quot;)
   public Page&lt;UserDTO&gt; pagedUsers(Pageable pageable) {
-<span class="nc" id="L162">    return userDataDTOService.getUserDataDTOs(pageable);</span>
+<span class="fc" id="L162">    return userDataDTOService.getUserDataDTOs(pageable);</span>
   }
 
   private UserDTO userDTO(User user) {
