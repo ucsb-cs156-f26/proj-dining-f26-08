@@ -16,6 +16,7 @@ import edu.ucsb.cs156.dining.models.UserDTO;
 import edu.ucsb.cs156.dining.repositories.AdminRepository;
 import edu.ucsb.cs156.dining.repositories.ModeratorRepository;
 import edu.ucsb.cs156.dining.repositories.UserRepository;
+import edu.ucsb.cs156.dining.services.UserDataDTOService;
 import edu.ucsb.cs156.dining.statuses.ModerationStatus;
 import edu.ucsb.cs156.dining.testconfig.TestConfig;
 import java.time.LocalDate;
@@ -41,6 +42,7 @@ public class UsersControllerTests extends ControllerTestCase {
   @MockBean UserRepository userRepository;
   @MockBean AdminRepository adminRepository;
   @MockBean ModeratorRepository moderatorRepository;
+  @MockBean UserDataDTOService userDataDTOService;
 
   @Test
   public void users__logged_out() throws Exception {
