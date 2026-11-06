@@ -23,4 +23,4 @@ repo_name: "TBD"
 repo: ucsb-cs156-f26/proj-dining-f26-08
 owner: ucsb-cs156-f26
 repo_name: proj-dining-f26-08
-pull_requests: []
+pull_requests: [{"author":{"id":"U_kgDODf-SIw","is_bot":false,"login":"celinezhao7","name":"Celine Zhao"},"headRefName":"celine-admin-users-paged","number":14,"title":"Celine - add paginated admin users endpoint and service","url":"https://github.com/ucsb-cs156-f26/proj-dining-f26-08/pull/14"}]
