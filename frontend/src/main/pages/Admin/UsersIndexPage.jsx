@@ -1,10 +1,10 @@
-
 import { useState } from "react";
 import { Form } from "react-bootstrap";
 import BasicLayout from "main/layouts/BasicLayout/BasicLayout";
 import UsersTable from "main/components/Users/UsersTable";
 import { useBackend } from "main/utils/useBackend";
 
+const usersEndpoint = "/api/admin/users/paged";
 const pageSizeOptions = [10, 25, 50, 100, 500];
 
 export default function UsersIndexPage() {
@@ -12,10 +12,9 @@ export default function UsersIndexPage() {
   const [currentPage, setCurrentPage] = useState(0);
 
   const { data: users } = useBackend(
-    ["/api/admin/users/paged", currentPage, pageSize],
+    [usersEndpoint, currentPage, pageSize],
     {
-      method: "GET",
-      url: "/api/admin/users/paged",
+      url: usersEndpoint,
       params: {
         page: currentPage,
         size: pageSize,
@@ -38,7 +37,6 @@ export default function UsersIndexPage() {
         <Form.Group className="mb-3 d-flex align-items-center gap-2">
           <Form.Label className="mb-0">Page Size:</Form.Label>
           <Form.Select
-            style={{ width: "auto" }}
             value={pageSize}
             onChange={handlePageSizeChange}
             data-testid="UsersIndexPage-pageSize"
@@ -56,9 +54,7 @@ export default function UsersIndexPage() {
         <div className="d-flex align-items-center gap-2 mt-2">
           <button
             className="btn btn-outline-secondary"
-            onClick={() =>
-              setCurrentPage((p) => Math.max(p - 1, 0))
-            }
+            onClick={() => setCurrentPage((p) => p - 1)}
             disabled={currentPage === 0}
             data-testid="UsersIndexPage-prev"
           >
@@ -69,11 +65,7 @@ export default function UsersIndexPage() {
           </span>
           <button
             className="btn btn-outline-secondary"
-            onClick={() =>
-              setCurrentPage((p) =>
-                Math.min(p + 1, totalPages - 1)
-              )
-            }
+            onClick={() => setCurrentPage((p) => p + 1)}
             disabled={currentPage >= totalPages - 1}
             data-testid="UsersIndexPage-next"
           >

@@ -227,4 +227,24 @@ describe("UsersIndexPage tests", () => {
 
     expect(screen.getByText("user15@ucsb.edu")).toBeInTheDocument();
   });
+  test("shows empty initial state while users are loading", () => {
+    setup();
+
+    // Keep the paged users request pending
+    axiosMock.onGet("/api/admin/users/paged").reply(
+      () => new Promise(() => { }),
+    );
+
+    renderPage();
+
+    // Initial pagination should be displayed correctly
+    expect(screen.getByTestId("UsersIndexPage-page-info"))
+      .toHaveTextContent("Page 1 of 1");
+
+    // The table should not contain any user rows
+    expect(screen.getAllByRole("row")).toHaveLength(1);
+
+    // Next should be disabled when there are no pages
+    expect(screen.getByTestId("UsersIndexPage-next")).toBeDisabled();
+  });
 });
