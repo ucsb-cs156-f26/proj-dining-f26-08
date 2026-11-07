@@ -1,4 +1,3 @@
-
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "react-query";
 import { MemoryRouter } from "react-router";
@@ -83,9 +82,7 @@ describe("UsersIndexPage tests", () => {
 
     renderPage();
 
-    expect(
-      await screen.findByText("phtcon@ucsb.edu"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("phtcon@ucsb.edu")).toBeInTheDocument();
     expect(screen.getByText("pconrad.cis@gmail.com")).toBeInTheDocument();
     expect(screen.getByText("craig.zzyzx@example.org")).toBeInTheDocument();
   });
@@ -113,21 +110,21 @@ describe("UsersIndexPage tests", () => {
 
     await screen.findByText("user1@ucsb.edu");
 
-    expect(screen.getByTestId("UsersIndexPage-page-info"))
-      .toHaveTextContent("Page 1 of 2");
+    expect(screen.getByTestId("UsersIndexPage-page-info")).toHaveTextContent(
+      "Page 1 of 2",
+    );
 
-    expect(screen.queryByText("user11@ucsb.edu"))
-      .not.toBeInTheDocument();
+    expect(screen.queryByText("user11@ucsb.edu")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId("UsersIndexPage-next"));
 
     await screen.findByText("user11@ucsb.edu");
 
-    expect(screen.getByTestId("UsersIndexPage-page-info"))
-      .toHaveTextContent("Page 2 of 2");
+    expect(screen.getByTestId("UsersIndexPage-page-info")).toHaveTextContent(
+      "Page 2 of 2",
+    );
 
-    expect(screen.queryByText("user1@ucsb.edu"))
-      .not.toBeInTheDocument();
+    expect(screen.queryByText("user1@ucsb.edu")).not.toBeInTheDocument();
 
     await waitFor(() => {
       expect(
@@ -144,8 +141,9 @@ describe("UsersIndexPage tests", () => {
 
     await screen.findByText("user1@ucsb.edu");
 
-    expect(screen.getByTestId("UsersIndexPage-page-info"))
-      .toHaveTextContent("Page 1 of 2");
+    expect(screen.getByTestId("UsersIndexPage-page-info")).toHaveTextContent(
+      "Page 1 of 2",
+    );
   });
 
   test("prev button is disabled on first page", async () => {
@@ -174,21 +172,21 @@ describe("UsersIndexPage tests", () => {
     fireEvent.click(screen.getByTestId("UsersIndexPage-next"));
     await screen.findByText("user21@ucsb.edu");
 
-    expect(screen.getByTestId("UsersIndexPage-page-info"))
-      .toHaveTextContent("Page 3 of 3");
+    expect(screen.getByTestId("UsersIndexPage-page-info")).toHaveTextContent(
+      "Page 3 of 3",
+    );
 
     fireEvent.click(screen.getByTestId("UsersIndexPage-prev"));
 
     await screen.findByText("user11@ucsb.edu");
 
-    expect(screen.getByTestId("UsersIndexPage-page-info"))
-      .toHaveTextContent("Page 2 of 3");
+    expect(screen.getByTestId("UsersIndexPage-page-info")).toHaveTextContent(
+      "Page 2 of 3",
+    );
 
-    expect(screen.queryByText("user1@ucsb.edu"))
-      .not.toBeInTheDocument();
+    expect(screen.queryByText("user1@ucsb.edu")).not.toBeInTheDocument();
 
-    expect(screen.queryByText("user21@ucsb.edu"))
-      .not.toBeInTheDocument();
+    expect(screen.queryByText("user21@ucsb.edu")).not.toBeInTheDocument();
   });
 
   test("changing page size resets to first page", async () => {
@@ -202,8 +200,9 @@ describe("UsersIndexPage tests", () => {
     fireEvent.click(screen.getByTestId("UsersIndexPage-next"));
     await screen.findByText("user11@ucsb.edu");
 
-    expect(screen.getByTestId("UsersIndexPage-page-info"))
-      .toHaveTextContent("Page 2 of 2");
+    expect(screen.getByTestId("UsersIndexPage-page-info")).toHaveTextContent(
+      "Page 2 of 2",
+    );
 
     fireEvent.change(screen.getByTestId("UsersIndexPage-pageSize"), {
       target: { value: "25" },
@@ -212,8 +211,9 @@ describe("UsersIndexPage tests", () => {
     await screen.findByText("user1@ucsb.edu");
 
     await waitFor(() => {
-      expect(screen.getByTestId("UsersIndexPage-page-info"))
-        .toHaveTextContent("Page 1 of 1");
+      expect(screen.getByTestId("UsersIndexPage-page-info")).toHaveTextContent(
+        "Page 1 of 1",
+      );
 
       expect(
         axiosMock.history.get.some(
@@ -231,15 +231,16 @@ describe("UsersIndexPage tests", () => {
     setup();
 
     // Keep the paged users request pending
-    axiosMock.onGet("/api/admin/users/paged").reply(
-      () => new Promise(() => { }),
-    );
+    axiosMock
+      .onGet("/api/admin/users/paged")
+      .reply(() => new Promise(() => {}));
 
     renderPage();
 
     // Initial pagination should be displayed correctly
-    expect(screen.getByTestId("UsersIndexPage-page-info"))
-      .toHaveTextContent("Page 1 of 1");
+    expect(screen.getByTestId("UsersIndexPage-page-info")).toHaveTextContent(
+      "Page 1 of 1",
+    );
 
     // The table should not contain any user rows
     expect(screen.getAllByRole("row")).toHaveLength(1);
