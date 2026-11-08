@@ -18,6 +18,7 @@ export default function UsersIndexPage() {
       params: {
         page: currentPage,
         size: pageSize,
+        sort: "id,asc",
       },
     },
     { content: [], page: { totalPages: 0 } },

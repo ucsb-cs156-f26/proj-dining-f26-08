@@ -248,4 +248,38 @@ describe("UsersIndexPage tests", () => {
     // Next should be disabled when there are no pages
     expect(screen.getByTestId("UsersIndexPage-next")).toBeDisabled();
   });
+
+  test("requests users sorted by id ascending", async () => {
+    setup();
+    mockPagedUsers(createUsers(15));
+
+    renderPage();
+
+    await screen.findByText("user1@ucsb.edu");
+
+    await waitFor(() => {
+      expect(
+        axiosMock.history.get.some(
+          (request) =>
+            request.url === "/api/admin/users/paged" &&
+            request.params?.sort === "id,asc" &&
+            Number(request.params?.page) === 0 &&
+            Number(request.params?.size) === 10,
+        ),
+      ).toBe(true);
+    });
+
+    fireEvent.click(screen.getByTestId("UsersIndexPage-next"));
+
+    await screen.findByText("user11@ucsb.edu");
+
+    expect(
+      axiosMock.history.get.some(
+        (request) =>
+          request.url === "/api/admin/users/paged" &&
+          request.params?.sort === "id,asc" &&
+          Number(request.params?.page) === 1,
+      ),
+    ).toBe(true);
+  });
 });
