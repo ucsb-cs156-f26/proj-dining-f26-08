@@ -1,6 +1,6 @@
-import { render, waitFor, screen } from "@testing-library/react";
+import { render, waitFor, screen, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "react-query";
-import { MemoryRouter, Route, Routes } from "react-router";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 import ReviewsPage from "main/pages/Reviews/ReviewsPage";
 import { vi } from "vitest";
 
@@ -21,6 +21,13 @@ vi.mock("react-toastify", async () => {
 });
 
 const axiosMock = new AxiosMockAdapter(axios);
+
+// Helper component to verify navigation
+const ReviewRoute = () => {
+  const location = useLocation();
+  return <div data-testid="review-route">{location.pathname}</div>;
+};
+
 describe("ReviewsPage tests", () => {
   const testId = "Reviewstable";
 
@@ -33,22 +40,28 @@ describe("ReviewsPage tests", () => {
   beforeEach(() => {
     axiosMock.reset();
     axiosMock.resetHistory();
+    mockToast.mockClear();
+
     axiosMock
       .onGet("/api/systemInfo")
       .reply(200, systemInfoFixtures.showingNeither);
   });
+
   afterEach(() => {
     axiosMock.reset();
     axiosMock.resetHistory();
+    vi.restoreAllMocks();
   });
 
   const renderWithRoute = (itemid) => {
     const queryClient = new QueryClient();
+
     render(
       <QueryClientProvider client={queryClient}>
         <MemoryRouter initialEntries={[`/reviews/${itemid}`]}>
           <Routes>
             <Route path="/reviews/:itemid" element={<ReviewsPage />} />
+            <Route path="/reviews/post/:id" element={<ReviewRoute />} />
           </Routes>
         </MemoryRouter>
       </QueryClientProvider>,
@@ -82,6 +95,7 @@ describe("ReviewsPage tests", () => {
     const itemid = "7";
     setupUserOnly();
     const adapterSpy = vi.spyOn(axios.defaults, "adapter");
+
     axiosMock
       .onGet(`/api/reviews/approved/forItem/${itemid}`)
       .reply(200, ReviewFixtures.threeReviews);
@@ -115,4 +129,35 @@ describe("ReviewsPage tests", () => {
       expect(toastMessage).toContain(`/api/reviews/approved/forItem/${itemId}`);
     });
   });
+
+  test.each(["7", "42"])(
+    "Review Item button navigates to the correct form for item %s",
+    async (itemid) => {
+      setupUserOnly();
+
+      axiosMock
+        .onGet(`/api/reviews/approved/forItem/${itemid}`)
+        .reply(200, ReviewFixtures.threeReviews);
+
+      renderWithRoute(itemid);
+
+      // Verify the Review Item button exists
+      const reviewButton = screen.getByRole("button", {
+        name: "Review Item",
+      });
+
+      expect(reviewButton).toBeInTheDocument();
+
+      // Verify the button uses the correct styling
+      expect(reviewButton).toHaveClass("btn-warning");
+
+      // Click the Review Item button
+      fireEvent.click(reviewButton);
+
+      // Verify navigation to the correct item's review form
+      expect(await screen.findByTestId("review-route")).toHaveTextContent(
+        `/reviews/post/${itemid}`,
+      );
+    },
+  );
 });
