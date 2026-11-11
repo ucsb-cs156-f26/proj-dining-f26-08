@@ -1,10 +1,13 @@
 import { useBackend } from "main/utils/useBackend";
 import BasicLayout from "main/layouts/BasicLayout/BasicLayout";
-import { useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
+import { Button } from "react-bootstrap";
 import ReviewsTable from "main/components/Reviews/ReviewsTable";
 
 export default function ReviewsPage() {
   const { itemid } = useParams();
+  const navigate = useNavigate();
+
   const {
     data: reviews,
     error: _error,
@@ -21,6 +24,15 @@ export default function ReviewsPage() {
     <BasicLayout>
       <div className="pt-2">
         <h1>Reviews for Menu Item {itemid}</h1>
+
+        <Button
+          variant="warning"
+          className="mb-3"
+          onClick={() => navigate(`/reviews/post/${itemid}`)}
+        >
+          Review Item
+        </Button>
+
         <ReviewsTable reviews={reviews} />
       </div>
     </BasicLayout>
