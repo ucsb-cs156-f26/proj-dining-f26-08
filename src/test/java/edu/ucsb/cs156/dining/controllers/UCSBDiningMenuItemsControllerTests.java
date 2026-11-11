@@ -175,4 +175,20 @@ public class UCSBDiningMenuItemsControllerTests extends ControllerTestCase {
         .perform(get("/api/diningcommons/menuitem?id=1").contentType(MediaType.APPLICATION_JSON))
         .andExpect(status().isNotFound());
   }
+
+  @Test
+  public void search_menu_items_accepts_two_character_query() throws Exception {
+    MenuItem pizza =
+        new MenuItem(12L, "portola", "lunch", "Cheese Pizza", "Pizza Station", List.of());
+
+    when(menuItemRepository.findTop20ByNameContainingIgnoreCaseOrderByNameAscIdAsc("pi"))
+        .thenReturn(List.of(pizza));
+
+    mockMvc
+        .perform(get("/api/diningcommons/menuitems/search").param("q", "pi"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].name").value("Cheese Pizza"));
+
+    verify(menuItemRepository).findTop20ByNameContainingIgnoreCaseOrderByNameAscIdAsc("pi");
+  }
 }
