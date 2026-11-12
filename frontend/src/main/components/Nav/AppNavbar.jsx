@@ -2,6 +2,7 @@ import { Button, Container, Nav, Navbar, NavDropdown } from "react-bootstrap";
 import { Link } from "react-router";
 import { hasRole } from "main/utils/currentUser";
 import AppNavbarLocalhost from "main/components/Nav/AppNavbarLocalhost";
+import MenuItemSearchContainer from "main/components/Nav/MenuItemSearchContainer";
 
 export default function AppNavbar({
   currentUser,
@@ -91,6 +92,7 @@ export default function AppNavbar({
                   <Nav.Link as={Link} to="/myreviews">
                     My Reviews
                   </Nav.Link>
+
                   <NavDropdown
                     title="Statistics"
                     id="appnavbar-statistics-dropdown"
@@ -103,6 +105,7 @@ export default function AppNavbar({
                     >
                       Overview
                     </NavDropdown.Item>
+
                     <NavDropdown.Item
                       as={Link}
                       to="/statistics/items/best"
@@ -110,6 +113,7 @@ export default function AppNavbar({
                     >
                       Best Rated Items
                     </NavDropdown.Item>
+
                     <NavDropdown.Item
                       as={Link}
                       to="/statistics/items/worst"
@@ -117,6 +121,7 @@ export default function AppNavbar({
                     >
                       Worst Rated Items
                     </NavDropdown.Item>
+
                     <NavDropdown.Item
                       as={Link}
                       to="/statistics/commons/averages"
@@ -124,6 +129,7 @@ export default function AppNavbar({
                     >
                       Commons Averages
                     </NavDropdown.Item>
+
                     <NavDropdown.Item
                       as={Link}
                       to="/statistics/commons/overtime"
@@ -131,6 +137,7 @@ export default function AppNavbar({
                     >
                       Commons Over Time
                     </NavDropdown.Item>
+
                     <NavDropdown.Item
                       as={Link}
                       to="/statistics/commons/meals"
@@ -144,6 +151,15 @@ export default function AppNavbar({
                 <></>
               )}
             </Nav>
+
+            {currentUser?.loggedIn && (
+              <div
+                className="mx-xl-3 my-2 my-xl-0 flex-grow-1"
+                style={{ maxWidth: 340, minWidth: 0 }}
+              >
+                <MenuItemSearchContainer />
+              </div>
+            )}
 
             <Nav className="ml-auto">
               {currentUser && currentUser.loggedIn ? (
