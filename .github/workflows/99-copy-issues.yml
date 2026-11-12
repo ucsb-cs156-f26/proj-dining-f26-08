@@ -1,65 +1,54 @@
 name: 99 - Copy issues from starter repo
 
 env:
-    GH_TOKEN: ${{ github.token }}
-    STARTER: https://github.com/ucsb-cs156/proj-dining
-    TAG: ${{vars.QXX}}
+  GH_TOKEN: ${{ github.token }}
+  STARTER: ucsb-cs156/proj-dining
+  DEST: ${{ github.repository }}
+  TAG: ${{ vars.QXX }}
 
 on:
   workflow_dispatch:
-     
+
+permissions:
+  issues: write
+
 jobs:
-  initialize:
-    name: List Issues to JSON
+  copy-issues:
+    name: Copy issues and subissues from starter repo
     runs-on: ubuntu-latest
-    outputs:
-        issues: ${{ steps.get-issues.outputs.issues }}  
-
     steps:
-      - uses: actions/checkout@v3
-            
-      - name: List Issues
-        id: get-issues
+      - name: Install gh-sub-issue extension
+        run: gh extension install yahsan2/gh-sub-issue
+
+      - name: Copy issues and subissues
         run: |
-          GH_REPO=${{env.STARTER}} gh issue list -s open -l ${{env.TAG}} --json number,title,body,labels | jq '[ ( .[] | { number: .number, title: .title , body: .body, labels: ( .labels | [ .[].name ] | join(",") )  } ) ]' > issues.json          
-          cat issues.json
-          {
-               echo 'issues<<THIS_IS_THIS_EOF_MARKER'
-               cat issues.json
-               echo THIS_IS_THIS_EOF_MARKER
-          } >> "$GITHUB_OUTPUT"
-          
-          # The following line can be uncommented for a simple test of later stages
-          # echo 'issues=[{"title":"test", "number": 1, "body": "test body", "labels" : "a,b"}]' >> "$GITHUB_OUTPUT"   
+          set -euo pipefail
+          declare -A MAP
 
-  addIssuesToRepo:
-    name: Add issue (${{ matrix.value.number }}) to repo 
-    runs-on: ubuntu-latest
-    needs: [initialize]
+          echo "=== Pass 1: create issues ==="
+          for n in $(gh issue list -R "$STARTER" -s open -l "$TAG" -L 500 --json number --jq '.[].number' | sort -n); do
+            title=$(gh issue view "$n" -R "$STARTER" --json title --jq .title)
+            body=$(gh issue view "$n" -R "$STARTER" --json body --jq .body)
+            labels=$(gh issue view "$n" -R "$STARTER" --json labels --jq '[.labels[].name] | join(",")')
 
-    env:
-      destination: target/reports/apidocs  
-    strategy:
-      matrix:
-        value: ${{ fromJSON(needs.initialize.outputs.ISSUES)}}
+            args=(--title "$title" --body "${body:-(no description)}")
+            if [[ -n "$labels" ]]; then
+              args+=(--label "$labels")
+            fi
 
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-         
-      - name: Create issue
-        uses: dacbd/create-issue-action@main
-        with:
-            token: ${{ github.token }}
-            title: ${{ matrix.value.title }}
-            body: ${{ matrix.value.body }}
-            labels: ${{ matrix.value.labels }}
-        
+            url=$(gh issue create -R "$DEST" "${args[@]}")
+            MAP[$n]=${url##*/}
+            echo "starter #$n -> $DEST #${MAP[$n]}"
+            sleep 1
+          done
 
- 
-           
-
-
-    
-
-        
+          echo "=== Pass 2: link subissues ==="
+          for parent in "${!MAP[@]}"; do
+            for child in $(gh sub-issue list "$parent" --repo "$STARTER" --relation children --json number --jq '.[].number'); do
+              if [[ -n "${MAP[$child]:-}" ]]; then
+                echo "linking $DEST #${MAP[$child]} under #${MAP[$parent]}"
+                gh sub-issue add "${MAP[$parent]}" "${MAP[$child]}" --repo "$DEST"
+                sleep 1
+              fi
+            done
+          done
