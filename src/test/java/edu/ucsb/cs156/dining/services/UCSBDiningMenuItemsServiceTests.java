@@ -19,11 +19,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.orm.jpa.AutoConfigureDataJpa;
 import org.springframework.boot.test.autoconfigure.web.client.RestClientTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.client.MockRestServiceServer;
 
 @RestClientTest(UCSBDiningMenuItemsService.class)
 @AutoConfigureDataJpa
+@TestPropertySource(properties = "UCSB_DINING_API_HOST=http://localhost:18091")
 public class UCSBDiningMenuItemsServiceTests {
 
   @Value("${app.ucsb.api.consumer_key}")
@@ -52,11 +54,15 @@ public class UCSBDiningMenuItemsServiceTests {
   @Test
   void test_get_success() throws Exception {
 
+    // Verify that the override is resolved, not the production default.
+    assertEquals("http://localhost:18091", apiHost);
+
     String dateTime = "2023-10-10";
     String diningCommonCode = "ortega";
     String mealCode = "lunch";
 
     String expectedURL = UCSBDiningMenuItemsService.ALL_MEAL_ITEMS_AT_A_DINING_COMMON_ENDPOINT;
+
     expectedURL = expectedURL.replace("{apiHost}", apiHost);
     expectedURL = expectedURL.replace("{date-time}", dateTime);
     expectedURL = expectedURL.replace("{dining-common-code}", diningCommonCode);
@@ -86,16 +92,21 @@ public class UCSBDiningMenuItemsServiceTests {
 
     List<Entree> actualResult =
         ucsbDiningMenuItemsService.get(dateTime, diningCommonCode, mealCode);
+
     List<Entree> expectedList = new ArrayList<>();
     expectedList.addAll(Arrays.asList(expectedEntree));
+
     assertEquals(expectedList, actualResult);
   }
 
   @Test
   public void getOrCreateTest() {
     Entree exists = Entree.builder().name(NAME).station(STATION).build();
+
     Entree doesNotExist = Entree.builder().name("doesNotExist").station("doesNotExist").build();
+
     ArrayList<Entree> returnedEntrees = new ArrayList<>(List.of(exists, doesNotExist));
+
     MenuItem existsMi =
         MenuItem.builder()
             .id(1L)
@@ -104,6 +115,7 @@ public class UCSBDiningMenuItemsServiceTests {
             .diningCommonsCode("ortega")
             .mealCode("lunch")
             .build();
+
     MenuItem createdMi =
         MenuItem.builder()
             .name("doesNotExist")
@@ -111,9 +123,12 @@ public class UCSBDiningMenuItemsServiceTests {
             .diningCommonsCode("ortega")
             .mealCode("lunch")
             .build();
+
     when(miRepository.findExistingEntrees("ortega", "lunch", returnedEntrees))
         .thenReturn(new ArrayList<>(List.of(existsMi)));
+
     when(miRepository.save(createdMi)).thenReturn(createdMi);
+
     List<MenuItem> actualResult =
         ucsbDiningMenuItemsService.getOrCreateMenuItems("ortega", "lunch", returnedEntrees);
     assertEquals(new ArrayList<>(List.of(existsMi, createdMi)), actualResult);

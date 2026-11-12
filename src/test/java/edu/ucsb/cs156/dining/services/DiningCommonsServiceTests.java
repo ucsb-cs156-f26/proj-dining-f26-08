@@ -18,11 +18,13 @@ import org.springframework.boot.test.autoconfigure.web.client.RestClientTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.client.MockRestServiceServer;
 
 @RestClientTest(DiningCommonsService.class)
 @AutoConfigureDataJpa
 @ContextConfiguration(classes = {})
+@TestPropertySource(properties = "UCSB_DINING_API_HOST=http://localhost:18091")
 class DiningCommonsServiceTests {
 
   @MockBean private WiremockService wiremockService;
@@ -53,6 +55,9 @@ class DiningCommonsServiceTests {
 
   @Test
   void get_returns_a_list_of_commons() throws Exception {
+
+    // Verify that the override is resolved, not the production default.
+    assertEquals("http://localhost:18091", apiHost);
 
     String expectedURL = DiningCommonsService.ENDPOINT.replace("{apiHost}", apiHost);
 
@@ -95,8 +100,10 @@ class DiningCommonsServiceTests {
         .andRespond(withSuccess(expectedResult, MediaType.APPLICATION_JSON));
 
     List<DiningCommons> actualResult = diningCommonsService.get();
+
     List<DiningCommons> expectedList = new ArrayList<>();
     expectedList.addAll(Arrays.asList(expectedCommons));
+
     assertEquals(expectedList, actualResult);
   }
 }
