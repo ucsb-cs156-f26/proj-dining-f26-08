@@ -1,6 +1,7 @@
 package edu.ucsb.cs156.dining.repositories;
 
 import edu.ucsb.cs156.dining.entities.MenuItem;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
@@ -19,6 +20,9 @@ public interface MenuItemRepository
    */
   Optional<MenuItem> findByDiningCommonsCodeAndMealCodeAndNameAndStation(
       String diningCommonsCode, String mealCode, String name, String station);
+
+  /** Return at most 20 menu items whose names contain the search text, ignoring case. */
+  List<MenuItem> findTop20ByNameContainingIgnoreCaseOrderByNameAscIdAsc(String name);
 
   boolean existsById(Long id);
 }
