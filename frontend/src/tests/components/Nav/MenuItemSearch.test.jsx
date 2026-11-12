@@ -118,4 +118,12 @@ describe("MenuItemSearch", () => {
       screen.queryByText("No matching menu items found."),
     ).not.toBeInTheDocument();
   });
+
+  test("does not show empty results when query prop is omitted", () => {
+    render(<MenuItemSearch />);
+
+    expect(
+      screen.queryByText("No matching menu items found."),
+    ).not.toBeInTheDocument();
+  });
 });
