@@ -29,12 +29,14 @@ jobs:
           for n in $(gh issue list -R "$STARTER" -s open -l "$TAG" -L 500 --json number --jq '.[].number' | sort -n); do
             title=$(gh issue view "$n" -R "$STARTER" --json title --jq .title)
             body=$(gh issue view "$n" -R "$STARTER" --json body --jq .body)
-            labels=$(gh issue view "$n" -R "$STARTER" --json labels --jq '[.labels[].name] | join(",")')
+            mapfile -t label_names < <(gh issue view "$n" -R "$STARTER" --json labels --jq '.labels[].name')
 
             args=(--title "$title" --body "${body:-(no description)}")
-            if [[ -n "$labels" ]]; then
-              args+=(--label "$labels")
-            fi
+            for label in "${label_names[@]}"; do
+              # create the label in the destination if it doesn't exist yet
+              gh label create "$label" -R "$DEST" >/dev/null 2>&1 || true
+              args+=(--label "$label")
+            done
 
             url=$(gh issue create -R "$DEST" "${args[@]}")
             MAP[$n]=${url##*/}
@@ -44,7 +46,8 @@ jobs:
 
           echo "=== Pass 2: link subissues ==="
           for parent in "${!MAP[@]}"; do
-            for child in $(gh sub-issue list "$parent" --repo "$STARTER" --relation children --json number --jq '.[].number'); do
+            children=$(gh sub-issue list "$parent" --repo "$STARTER" --relation children --json number -L 100 | jq -r '(.subIssues // [])[].number')
+            for child in $children; do
               if [[ -n "${MAP[$child]:-}" ]]; then
                 echo "linking $DEST #${MAP[$child]} under #${MAP[$parent]}"
                 gh sub-issue add "${MAP[$parent]}" "${MAP[$child]}" --repo "$DEST"
