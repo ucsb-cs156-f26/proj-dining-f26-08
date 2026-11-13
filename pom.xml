@@ -339,6 +339,8 @@
             <param>edu.ucsb.cs156.dining.services.wiremock.WiremockService</param>
             <param>edu.ucsb.cs156.dining.services.wiremock.WiremockServiceDummy</param>
             <param>edu.ucsb.cs156.dining.services.wiremock.WiremockServiceImpl</param>
+            <param>edu.ucsb.cs156.dining.services.wiremock.DiningApiWiremockService</param>
+            <param>edu.ucsb.cs156.dining.services.wiremock.DiningApiWireMockStubs</param>
             <param>${app.package}.services.GrantedAuthoritiesService</param>
           </excludedClasses>
           <excludedTestClasses>
