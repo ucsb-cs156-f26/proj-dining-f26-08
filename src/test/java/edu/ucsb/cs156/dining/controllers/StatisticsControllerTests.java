@@ -26,6 +26,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -785,6 +787,51 @@ public class StatisticsControllerTests extends ControllerTestCase {
     assertEquals("carrillo", result.get(0).getDiningCommonsCode());
     assertEquals(5.0, result.get(0).getAverageStars());
     assertEquals(Long.valueOf(1L), result.get(0).getReviewCount());
+  }
+
+  @WithMockUser(roles = {"USER"})
+  @ParameterizedTest
+  @CsvSource({"ALL, 3.0, 5", "6M, 3.5, 4", "1M, 4.0, 3", "1W, 4.5, 2"})
+  public void commons_averages_filters_reviews_before_aggregating(
+      String period, double expectedAverage, int expectedCount) throws Exception {
+    LocalDateTime now = LocalDateTime.now();
+    MenuItem waffle = item(1L, "Waffle", "carrillo", "breakfast", "Bakery");
+    MenuItem soup = item(2L, "Soup", "ortega", "lunch", "Stove");
+    when(reviewRepository.findByStatus(ModerationStatus.APPROVED))
+        .thenReturn(
+            Arrays.asList(
+                review(waffle, 5L, now.minusDays(1)),
+                review(waffle, 4L, now.minusDays(2)),
+                review(waffle, 3L, now.minusWeeks(2)),
+                review(waffle, 2L, now.minusMonths(3)),
+                review(waffle, 1L, now.minusMonths(7)),
+                review(soup, 1L, now.minusMonths(7))));
+
+    mockMvc
+        .perform(get("/api/statistics/commons/averages").param("period", period))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].diningCommonsCode").value("carrillo"))
+        .andExpect(jsonPath("$[0].averageStars").value(expectedAverage))
+        .andExpect(jsonPath("$[0].reviewCount").value(expectedCount))
+        .andExpect(jsonPath("$.length()").value(period.equals("ALL") ? 2 : 1));
+  }
+
+  @WithMockUser(roles = {"USER"})
+  @Test
+  public void commons_averages_only_includes_undated_reviews_for_all_time() throws Exception {
+    MenuItem waffle = item(1L, "Waffle", "carrillo", "breakfast", "Bakery");
+    when(reviewRepository.findByStatus(ModerationStatus.APPROVED))
+        .thenReturn(Collections.singletonList(review(waffle, 4L, null)));
+
+    mockMvc
+        .perform(get("/api/statistics/commons/averages"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].averageStars").value(4.0))
+        .andExpect(jsonPath("$[0].reviewCount").value(1));
+    mockMvc
+        .perform(get("/api/statistics/commons/averages").param("period", "1W"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(0));
   }
 
   // ---------- /commons/averages/overtime ----------
