@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "react-query";
 import { MemoryRouter } from "react-router";
 import { afterEach, vi } from "vitest";
@@ -76,10 +76,11 @@ describe("CommonsAveragesPage tests", () => {
     await screen.findByText("Dining Commons Averages");
 
     expect(useBackendSpy).toHaveBeenCalledWith(
-      ["/api/statistics/commons/averages"],
+      ["/api/statistics/commons/averages", "ALL"],
       {
         method: "GET",
         url: "/api/statistics/commons/averages",
+        params: { period: "ALL" },
       },
       [],
     );
@@ -99,6 +100,43 @@ describe("CommonsAveragesPage tests", () => {
 
     expect(
       await screen.findByTestId("CommonsAveragesPage-empty"),
-    ).toHaveTextContent("No reviews available yet.");
+    ).toHaveTextContent("No reviews available for this period yet.");
   });
+  test.each(["6M", "1M", "1W"])(
+    "updates averages for period %s and restores all time",
+    async (period) => {
+      axiosMock
+        .onGet("/api/statistics/commons/averages", {
+          params: { period: "ALL" },
+        })
+        .reply(200, statisticsFixtures.commonsAverages);
+      axiosMock
+        .onGet("/api/statistics/commons/averages", { params: { period } })
+        .reply(200, []);
+      render(
+        <QueryClientProvider client={new QueryClient()}>
+          <MemoryRouter>
+            <CommonsAveragesPage />
+          </MemoryRouter>
+        </QueryClientProvider>,
+      );
+      await screen.findByText("4.70");
+      const select = screen.getByRole("combobox", { name: "Time period" });
+      expect(screen.getAllByRole("option")).toHaveLength(4);
+      fireEvent.change(select, { target: { value: period } });
+      expect(select).toHaveValue(period);
+      expect(
+        await screen.findByTestId("CommonsAveragesPage-empty"),
+      ).toHaveTextContent("No reviews available for this period yet.");
+      expect(
+        axiosMock.history.get.some(
+          (request) =>
+            request.url === "/api/statistics/commons/averages" &&
+            request.params.period === period,
+        ),
+      ).toBe(true);
+      fireEvent.change(select, { target: { value: "ALL" } });
+      expect(await screen.findByText("4.70")).toBeInTheDocument();
+    },
+  );
 });

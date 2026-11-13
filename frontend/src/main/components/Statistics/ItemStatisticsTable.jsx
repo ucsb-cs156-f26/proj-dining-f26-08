@@ -1,5 +1,6 @@
 import React from "react";
 import OurTable from "main/components/OurTable";
+import { Link } from "react-router";
 
 export default function ItemStatisticsTable({
   items,
@@ -30,6 +31,15 @@ export default function ItemStatisticsTable({
     {
       Header: "Reviews",
       accessor: "reviewCount",
+    },
+    {
+      Header: "Comments",
+      accessor: "itemId",
+      Cell: ({ value, row }) => (
+        <Link to={`/reviews/${value}`}>
+          View reviews for {row.original.itemName}
+        </Link>
+      ),
     },
   ];
 

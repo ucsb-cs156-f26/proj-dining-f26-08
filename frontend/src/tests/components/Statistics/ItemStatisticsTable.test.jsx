@@ -1,10 +1,14 @@
 import { render, screen } from "@testing-library/react";
+import { MemoryRouter, Route, Routes } from "react-router";
+import userEvent from "@testing-library/user-event";
 import ItemStatisticsTable from "main/components/Statistics/ItemStatisticsTable";
 import { statisticsFixtures } from "fixtures/statisticsFixtures";
 
 describe("ItemStatisticsTable tests", () => {
   test("renders all columns and data", () => {
-    render(<ItemStatisticsTable items={statisticsFixtures.threeBestItems} />);
+    render(<ItemStatisticsTable items={statisticsFixtures.threeBestItems} />, {
+      wrapper: MemoryRouter,
+    });
 
     const testId = "ItemStatisticsTable";
     expect(
@@ -35,7 +39,9 @@ describe("ItemStatisticsTable tests", () => {
   });
 
   test("renders headers correctly", () => {
-    render(<ItemStatisticsTable items={statisticsFixtures.threeBestItems} />);
+    render(<ItemStatisticsTable items={statisticsFixtures.threeBestItems} />, {
+      wrapper: MemoryRouter,
+    });
 
     expect(
       screen.getByTestId("ItemStatisticsTable-header-itemName"),
@@ -63,10 +69,34 @@ describe("ItemStatisticsTable tests", () => {
         items={statisticsFixtures.threeBestItems}
         testIdPrefix="CustomPrefix"
       />,
+      { wrapper: MemoryRouter },
     );
 
     expect(
       screen.getByTestId("CustomPrefix-cell-row-0-col-itemName"),
     ).toHaveTextContent("Waffle");
+  });
+  test("opens the comments for the selected ranked item", async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <ItemStatisticsTable items={statisticsFixtures.threeBestItems} />
+            }
+          />
+          <Route path="/reviews/2" element={<p>Soup comments</p>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    expect(
+      screen.getByRole("link", { name: "View reviews for Waffle" }),
+    ).toHaveAttribute("href", "/reviews/1");
+    await user.click(
+      screen.getByRole("link", { name: "View reviews for Soup" }),
+    );
+    expect(screen.getByText("Soup comments")).toBeInTheDocument();
   });
 });
