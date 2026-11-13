@@ -33,9 +33,7 @@ describe("UsersIndexPage tests", () => {
         200,
         {
           content: allUsers.slice(page * size, (page + 1) * size),
-          page: {
-            totalPages: Math.ceil(allUsers.length / size),
-          },
+          totalPages: Math.ceil(allUsers.length / size),
         },
       ];
     });
@@ -185,7 +183,6 @@ describe("UsersIndexPage tests", () => {
     );
 
     expect(screen.queryByText("user1@ucsb.edu")).not.toBeInTheDocument();
-
     expect(screen.queryByText("user21@ucsb.edu")).not.toBeInTheDocument();
   });
 
@@ -227,6 +224,7 @@ describe("UsersIndexPage tests", () => {
 
     expect(screen.getByText("user15@ucsb.edu")).toBeInTheDocument();
   });
+
   test("shows empty initial state while users are loading", () => {
     setup();
 
