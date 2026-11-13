@@ -32,6 +32,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MvcResult;
@@ -447,5 +448,38 @@ public class UsersControllerTests extends ControllerTestCase {
         .getUserDataDTOs(
             org.mockito.ArgumentMatchers.argThat(
                 p -> p.getPageNumber() == 0 && p.getPageSize() == 5));
+  }
+
+  @Test
+  @WithMockUser(roles = {"ADMIN"})
+  public void paged_users_are_sorted_by_id() throws Exception {
+    mockMvc
+        .perform(get("/api/admin/users/paged").param("page", "1").param("size", "5"))
+        .andExpect(status().isOk());
+
+    verify(userDataDTOService)
+        .getUserDataDTOs(
+            org.mockito.ArgumentMatchers.argThat(
+                p ->
+                    p.getPageNumber() == 1
+                        && p.getPageSize() == 5
+                        && p.getSort().equals(Sort.by("id").ascending())));
+  }
+
+  @Test
+  @WithMockUser(roles = {"ADMIN"})
+  public void paged_users_ignore_other_sort_parameters() throws Exception {
+    mockMvc
+        .perform(
+            get("/api/admin/users/paged")
+                .param("page", "0")
+                .param("size", "10")
+                .param("sort", "email,desc"))
+        .andExpect(status().isOk());
+
+    verify(userDataDTOService)
+        .getUserDataDTOs(
+            org.mockito.ArgumentMatchers.argThat(
+                p -> p.getSort().equals(Sort.by("id").ascending())));
   }
 }

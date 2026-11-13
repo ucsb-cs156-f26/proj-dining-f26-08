@@ -20,7 +20,9 @@ import java.util.stream.StreamSupport;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -159,7 +161,10 @@ public class UsersController extends ApiController {
   @PreAuthorize("hasRole('ROLE_ADMIN')")
   @GetMapping("/admin/users/paged")
   public Page<UserDTO> pagedUsers(Pageable pageable) {
-    return userDataDTOService.getUserDataDTOs(pageable);
+    Pageable sortedPageable =
+        PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by("id").ascending());
+
+    return userDataDTOService.getUserDataDTOs(sortedPageable);
   }
 
   private UserDTO userDTO(User user) {
