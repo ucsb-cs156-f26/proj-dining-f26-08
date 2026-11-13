@@ -4,7 +4,7 @@ const COLORS = ["#005ea8", "#a23b00", "#287a37", "#783fa0"];
 
 function monthNumber(period) {
   const [year, month] = period.split("-").map(Number);
-  return year * 12 + month - 1;
+  return year * 12 + month;
 }
 
 export default function CommonsAveragesOverTimeGraph({ rows }) {
@@ -107,7 +107,7 @@ export default function CommonsAveragesOverTimeGraph({ rows }) {
       <figcaption>
         {codes.map((code, index) => (
           <span key={code} className="d-inline-block me-3">
-            <svg width="30" height="12" aria-hidden="true">
+            <svg className="me-1" width="30" height="12" aria-hidden="true">
               <line
                 x1="0"
                 y1="6"
@@ -123,7 +123,7 @@ export default function CommonsAveragesOverTimeGraph({ rows }) {
                 r="4"
                 fill={COLORS[index % COLORS.length]}
               />
-            </svg>{" "}
+            </svg>
             {code}
           </span>
         ))}

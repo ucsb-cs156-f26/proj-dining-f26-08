@@ -61,6 +61,9 @@ describe("ItemStatisticsTable tests", () => {
     expect(
       screen.getByTestId("ItemStatisticsTable-header-reviewCount"),
     ).toHaveTextContent("Reviews");
+    expect(
+      screen.getByTestId("ItemStatisticsTable-header-itemId"),
+    ).toHaveTextContent("Comments");
   });
 
   test("accepts a custom testIdPrefix", () => {
