@@ -21,10 +21,11 @@ export default function UsersIndexPage() {
         sort: "id,asc",
       },
     },
-    { content: [], page: { totalPages: 0 } },
+    { content: [], totalPages: 0 },
   );
 
-  const totalPages = users.page.totalPages;
+  const totalPages = users.totalPages;
+  const userList = users.content;
 
   const handlePageSizeChange = (e) => {
     setPageSize(Number(e.target.value));
@@ -35,6 +36,7 @@ export default function UsersIndexPage() {
     <BasicLayout>
       <div className="pt-2">
         <h1>Users</h1>
+
         <Form.Group className="mb-3 d-flex align-items-center gap-2">
           <Form.Label className="mb-0">Page Size:</Form.Label>
           <Form.Select
@@ -50,7 +52,7 @@ export default function UsersIndexPage() {
           </Form.Select>
         </Form.Group>
 
-        <UsersTable users={users.content} />
+        <UsersTable users={userList} />
 
         <div className="d-flex align-items-center gap-2 mt-2">
           <button
@@ -61,9 +63,11 @@ export default function UsersIndexPage() {
           >
             Previous
           </button>
+
           <span data-testid="UsersIndexPage-page-info">
             Page {currentPage + 1} of {Math.max(totalPages, 1)}
           </span>
+
           <button
             className="btn btn-outline-secondary"
             onClick={() => setCurrentPage((p) => p + 1)}
