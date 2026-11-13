@@ -5,7 +5,9 @@
 
   <!-- (0) <modelVersion/> -->
   <modelVersion>4.0.0</modelVersion>
-
+  
+  <!-- added this comment to test build times if pom.xml changed -->
+  
   <!-- (1) <parent/> -->
 
   <parent>
