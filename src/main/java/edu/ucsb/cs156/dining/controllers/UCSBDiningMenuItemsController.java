@@ -3,6 +3,7 @@ package edu.ucsb.cs156.dining.controllers;
 import edu.ucsb.cs156.dining.entities.MenuItem;
 import edu.ucsb.cs156.dining.errors.EntityNotFoundException;
 import edu.ucsb.cs156.dining.models.Entree;
+import edu.ucsb.cs156.dining.models.MenuItemSearchResult;
 import edu.ucsb.cs156.dining.repositories.MenuItemRepository;
 import edu.ucsb.cs156.dining.services.UCSBDiningMenuItemsService;
 import edu.ucsb.cs156.dining.statuses.ModerationStatus;
@@ -29,6 +30,30 @@ public class UCSBDiningMenuItemsController extends ApiController {
   @Autowired UCSBDiningMenuItemsService ucsbDiningMenuItemsService;
 
   @Autowired MenuItemRepository menuItemRepository;
+
+  @Operation(summary = "Search saved menu items by name")
+  @GetMapping(value = "/menuitems/search", produces = "application/json")
+  public ResponseEntity<List<MenuItemSearchResult>> search_menu_items(
+      @Parameter(description = "At least two characters from the menu item name")
+          @RequestParam(required = false)
+          String q) {
+    if (q == null || q.trim().length() < 2) {
+      return ResponseEntity.ok(List.of());
+    }
+
+    List<MenuItemSearchResult> results =
+        menuItemRepository.findTop20ByNameContainingIgnoreCaseOrderByNameAscIdAsc(q.trim()).stream()
+            .map(
+                item ->
+                    new MenuItemSearchResult(
+                        item.getId(),
+                        item.getName(),
+                        item.getDiningCommonsCode(),
+                        item.getMealCode(),
+                        item.getStation()))
+            .toList();
+    return ResponseEntity.ok(results);
+  }
 
   @Operation(summary = "Get list of entrees being served at given meal, dining common, and day")
   @GetMapping(
