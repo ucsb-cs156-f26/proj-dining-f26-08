@@ -1,5 +1,7 @@
 package edu.ucsb.cs156.dining.controllers;
 
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -38,6 +40,58 @@ public class UCSBDiningMenuItemsControllerTests extends ControllerTestCase {
   @Autowired private ObjectMapper objectMapper;
 
   @MockitoBean MenuItemRepository menuItemRepository;
+
+  @Test
+  public void search_menu_items_returns_matching_item_details_without_reviews() throws Exception {
+    MenuItem pizza =
+        new MenuItem(12L, "portola", "lunch", "Cheese Pizza", "Pizza Station", List.of());
+    when(menuItemRepository.findTop20ByNameContainingIgnoreCaseOrderByNameAscIdAsc("pIzZa"))
+        .thenReturn(List.of(pizza));
+
+    mockMvc
+        .perform(get("/api/diningcommons/menuitems/search").param("q", "  pIzZa  "))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].id").value(12))
+        .andExpect(jsonPath("$[0].name").value("Cheese Pizza"))
+        .andExpect(jsonPath("$[0].diningCommonsCode").value("portola"))
+        .andExpect(jsonPath("$[0].mealCode").value("lunch"))
+        .andExpect(jsonPath("$[0].station").value("Pizza Station"))
+        .andExpect(jsonPath("$[0].reviews").doesNotExist());
+
+    verify(menuItemRepository).findTop20ByNameContainingIgnoreCaseOrderByNameAscIdAsc("pIzZa");
+  }
+
+  @Test
+  public void search_menu_items_returns_empty_list_for_no_matches() throws Exception {
+    when(menuItemRepository.findTop20ByNameContainingIgnoreCaseOrderByNameAscIdAsc("unicorn"))
+        .thenReturn(List.of());
+
+    mockMvc
+        .perform(get("/api/diningcommons/menuitems/search").param("q", "unicorn"))
+        .andExpect(status().isOk())
+        .andExpect(content().json("[]"));
+  }
+
+  @Test
+  public void search_menu_items_returns_empty_list_for_short_or_blank_queries() throws Exception {
+    for (String query : List.of("", " ", "a", "  a  ")) {
+      mockMvc
+          .perform(get("/api/diningcommons/menuitems/search").param("q", query))
+          .andExpect(status().isOk())
+          .andExpect(content().json("[]"));
+    }
+    verifyNoInteractions(menuItemRepository);
+  }
+
+  @Test
+  public void search_menu_items_returns_empty_list_when_query_is_missing() throws Exception {
+    mockMvc
+        .perform(get("/api/diningcommons/menuitems/search"))
+        .andExpect(status().isOk())
+        .andExpect(content().json("[]"));
+
+    verifyNoInteractions(menuItemRepository);
+  }
 
   @WithMockUser(roles = {"USER"})
   @Test
@@ -120,5 +174,21 @@ public class UCSBDiningMenuItemsControllerTests extends ControllerTestCase {
     mockMvc
         .perform(get("/api/diningcommons/menuitem?id=1").contentType(MediaType.APPLICATION_JSON))
         .andExpect(status().isNotFound());
+  }
+
+  @Test
+  public void search_menu_items_accepts_two_character_query() throws Exception {
+    MenuItem pizza =
+        new MenuItem(12L, "portola", "lunch", "Cheese Pizza", "Pizza Station", List.of());
+
+    when(menuItemRepository.findTop20ByNameContainingIgnoreCaseOrderByNameAscIdAsc("pi"))
+        .thenReturn(List.of(pizza));
+
+    mockMvc
+        .perform(get("/api/diningcommons/menuitems/search").param("q", "pi"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].name").value("Cheese Pizza"));
+
+    verify(menuItemRepository).findTop20ByNameContainingIgnoreCaseOrderByNameAscIdAsc("pi");
   }
 }
