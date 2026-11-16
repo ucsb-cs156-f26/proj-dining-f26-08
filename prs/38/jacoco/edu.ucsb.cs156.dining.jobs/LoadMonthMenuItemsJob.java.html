@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LoadMonthMenuItemsJob.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">proj-dining</a> &gt; <a href="index.source.html" class="el_package">edu.ucsb.cs156.dining.jobs</a> &gt; <span class="el_source">LoadMonthMenuItemsJob.java</span></div><h1>LoadMonthMenuItemsJob.java</h1><pre class="source lang-java linenums">package edu.ucsb.cs156.dining.jobs;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import edu.ucsb.cs156.dining.models.DiningCommons;
+import edu.ucsb.cs156.dining.models.Entree;
+import edu.ucsb.cs156.dining.services.DiningCommonsService;
+import edu.ucsb.cs156.dining.services.UCSBDiningMenuItemsService;
+import edu.ucsb.cs156.dining.services.UCSBDiningMenuService;
+import edu.ucsb.cs156.jobs.services.JobContext;
+import edu.ucsb.cs156.jobs.services.JobContextConsumer;
+import java.time.LocalDate;
+import java.time.YearMonth;
+import java.util.List;
+import java.util.concurrent.Callable;
+import lombok.Builder;
+import lombok.Getter;
+import org.springframework.web.client.HttpClientErrorException;
+
+@Builder
+@Getter
+public class LoadMonthMenuItemsJob implements JobContextConsumer {
+  /** Downloads and saves the menu items for every day of a month, backing off on 429s. */
+  private DiningCommonsService diningCommonsService;
+
+  private UCSBDiningMenuService menuService;
+  private UCSBDiningMenuItemsService menuItemsService;
+  private String apiKey;
+  private YearMonth month;
+  private Sleeper sleeper;
+  @Builder.Default private int maxRetries = 5;
+  @Builder.Default private long initialBackoffMs = 1000;
+  @Builder.Default private ObjectMapper objectMapper = new ObjectMapper();
+
+  @Override
+  public void accept(JobContext ctx) throws Exception {
+<span class="fc bfc" id="L37" title="All 4 branches covered.">    if (apiKey == null || apiKey.isBlank()) {</span>
+<span class="fc" id="L38">      ctx.log(&quot;UCSB API key is not set; skipping menu item download.&quot;);</span>
+<span class="fc" id="L39">      return;</span>
+    }
+
+<span class="fc" id="L42">    List&lt;DiningCommons&gt; commonsList = withRetry(ctx, () -&gt; diningCommonsService.get());</span>
+
+<span class="fc" id="L44">    int itemCount = 0;</span>
+<span class="fc" id="L45">    for (LocalDate date = month.atDay(1);</span>
+<span class="fc bfc" id="L46" title="All 2 branches covered.">        !date.isAfter(month.atEndOfMonth());</span>
+<span class="fc" id="L47">        date = date.plusDays(1)) {</span>
+<span class="fc bfc" id="L48" title="All 2 branches covered.">      for (DiningCommons commons : commonsList) {</span>
+<span class="fc" id="L49">        itemCount += loadDay(ctx, date.toString(), commons.getCode());</span>
+<span class="fc" id="L50">      }</span>
+    }
+<span class="fc" id="L52">    ctx.log(</span>
+        &quot;Finished loading menu items for &quot; + month + &quot; (&quot; + itemCount + &quot; menu items processed)&quot;);
+<span class="fc" id="L54">  }</span>
+
+  private int loadDay(JobContext ctx, String date, String code) throws Exception {
+    JsonNode meals;
+    try {
+<span class="fc" id="L59">      String mealsJson = withRetry(ctx, () -&gt; menuService.getJSON(date, code));</span>
+<span class="fc bfc" id="L60" title="All 2 branches covered.">      if (mealsJson == null) {</span>
+<span class="fc" id="L61">        return 0; // commons closed that day</span>
+      }
+<span class="fc" id="L63">      meals = objectMapper.readTree(mealsJson);</span>
+<span class="fc" id="L64">    } catch (Exception e) {</span>
+<span class="fc" id="L65">      ctx.log(&quot;Failed to load meals for &quot; + date + &quot; &quot; + code + &quot;: &quot; + e.getMessage());</span>
+<span class="fc" id="L66">      return 0;</span>
+<span class="fc" id="L67">    }</span>
+
+<span class="fc" id="L69">    int count = 0;</span>
+<span class="fc bfc" id="L70" title="All 2 branches covered.">    for (JsonNode meal : meals) {</span>
+<span class="fc" id="L71">      String mealCode = meal.get(&quot;code&quot;).asText();</span>
+      try {
+<span class="fc" id="L73">        List&lt;Entree&gt; entrees = withRetry(ctx, () -&gt; menuItemsService.get(date, code, mealCode));</span>
+<span class="fc" id="L74">        count += menuItemsService.getOrCreateMenuItems(code, mealCode, entrees).size();</span>
+<span class="fc" id="L75">      } catch (Exception e) {</span>
+<span class="fc" id="L76">        ctx.log(&quot;Failed to load &quot; + date + &quot; &quot; + code + &quot; &quot; + mealCode + &quot;: &quot; + e.getMessage());</span>
+<span class="fc" id="L77">      }</span>
+<span class="fc" id="L78">    }</span>
+<span class="fc" id="L79">    return count;</span>
+  }
+
+  private &lt;T&gt; T withRetry(JobContext ctx, Callable&lt;T&gt; call) throws Exception {
+<span class="fc" id="L83">    long backoff = initialBackoffMs;</span>
+<span class="fc" id="L84">    for (int attempt = 0; ; attempt++) {</span>
+      try {
+<span class="fc" id="L86">        return call.call();</span>
+<span class="fc" id="L87">      } catch (HttpClientErrorException.TooManyRequests e) {</span>
+<span class="fc bfc" id="L88" title="All 2 branches covered.">        if (attempt &gt;= maxRetries) {</span>
+<span class="fc" id="L89">          throw e;</span>
+        }
+<span class="fc" id="L91">        ctx.log(&quot;Rate limited (429); waiting &quot; + backoff + &quot; ms before retrying&quot;);</span>
+<span class="fc" id="L92">        sleeper.sleep(backoff);</span>
+<span class="fc" id="L93">        backoff *= 2;</span>
+      }
+    }
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
