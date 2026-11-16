@@ -8,7 +8,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 @Repository
-public interface AdminRepository extends CrudRepository<Admin, Long> {
+public interface AdminRepository extends CrudRepository<Admin, String> {
   /**
    * This method returns an Admin entity with a given email.
    *
