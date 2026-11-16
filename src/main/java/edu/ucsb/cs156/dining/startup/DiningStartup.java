@@ -1,7 +1,13 @@
 package edu.ucsb.cs156.dining.startup;
 
 import edu.ucsb.cs156.dining.entities.Admin;
+import edu.ucsb.cs156.dining.jobs.LoadMonthMenuItemsJob;
 import edu.ucsb.cs156.dining.repositories.AdminRepository;
+import edu.ucsb.cs156.dining.services.DiningCommonsService;
+import edu.ucsb.cs156.dining.services.UCSBDiningMenuItemsService;
+import edu.ucsb.cs156.dining.services.UCSBDiningMenuService;
+import edu.ucsb.cs156.jobs.services.JobService;
+import java.time.YearMonth;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,10 +24,18 @@ public class DiningStartup {
   @Value("#{'${app.admin.emails}'.split(',')}")
   List<String> adminEmails;
 
+  @Value("${app.ucsb.api.consumer_key}")
+  String apiKey;
+
   @Autowired AdminRepository adminRepository;
+  @Autowired JobService jobService;
+  @Autowired DiningCommonsService diningCommonsService;
+  @Autowired UCSBDiningMenuService menuService;
+  @Autowired UCSBDiningMenuItemsService menuItemsService;
 
   /**
-   * Called once at application startup time. Loads all emails in ADMIN_EMAILS into the Admin table.
+   * Called once at application startup time. Loads all emails in ADMIN_EMAILS into the Admin table,
+   * then starts a background job that downloads the current month's menu items.
    */
   @EventListener(ApplicationReadyEvent.class)
   public void alwaysRunOnStartup() {
@@ -38,5 +52,19 @@ public class DiningStartup {
             log.error("Error saving admin email {}: {}", email, e.getMessage());
           }
         });
+
+    try {
+      jobService.runAsJob(
+          LoadMonthMenuItemsJob.builder()
+              .diningCommonsService(diningCommonsService)
+              .menuService(menuService)
+              .menuItemsService(menuItemsService)
+              .apiKey(apiKey)
+              .month(YearMonth.now())
+              .sleeper(Thread::sleep)
+              .build());
+    } catch (Exception e) {
+      log.error("Failed to start menu item download job: {}", e.getMessage());
+    }
   }
 }
