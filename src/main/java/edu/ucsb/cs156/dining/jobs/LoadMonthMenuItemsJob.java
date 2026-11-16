@@ -14,13 +14,15 @@ import java.time.YearMonth;
 import java.util.List;
 import java.util.concurrent.Callable;
 import lombok.Builder;
+import lombok.Getter;
 import org.springframework.web.client.HttpClientErrorException;
 
-/** Downloads and saves the menu items for every day of a month, backing off on 429s. */
 @Builder
+@Getter
 public class LoadMonthMenuItemsJob implements JobContextConsumer {
-
+  /** Downloads and saves the menu items for every day of a month, backing off on 429s. */
   private DiningCommonsService diningCommonsService;
+
   private UCSBDiningMenuService menuService;
   private UCSBDiningMenuItemsService menuItemsService;
   private String apiKey;
