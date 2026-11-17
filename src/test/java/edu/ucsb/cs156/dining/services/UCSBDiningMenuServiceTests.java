@@ -20,12 +20,14 @@ import org.springframework.boot.test.autoconfigure.web.client.RestClientTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 @RestClientTest(UCSBDiningMenuService.class)
 @AutoConfigureDataJpa
+@TestPropertySource(properties = "UCSB_DINING_API_HOST=http://localhost:18091")
 public class UCSBDiningMenuServiceTests {
 
   @Value("${app.ucsb.api.consumer_key}")
@@ -50,6 +52,10 @@ public class UCSBDiningMenuServiceTests {
 
   @Test
   public void test_getJSON_success() throws Exception {
+
+    // Verify that the override is resolved, not the production default.
+    assertEquals("http://localhost:18091", apiHost);
+
     String expectedResult = "{expectedResult}";
 
     String dateTime = "2023-10-10";

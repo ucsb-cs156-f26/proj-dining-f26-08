@@ -32,7 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * REST controller that exposes aggregated review statistics. These endpoints power the "Review
- * Statistics" pages of the frontend (see issue #18).
+ * Statistics" pages of the frontend.
  *
  * <p>Only reviews with moderation status {@link ModerationStatus#APPROVED} (or reviews that have no
  * comments and were therefore auto-approved) are considered when computing the statistics, so that
@@ -202,10 +202,14 @@ public class StatisticsController extends ApiController {
   @Operation(summary = "Average review score for each dining commons")
   @PreAuthorize("hasRole('ROLE_USER')")
   @GetMapping("/commons/averages")
-  public List<CommonsAverage> commonsAverages() {
-    log.info("statistics.commonsAverages");
+  public List<CommonsAverage> commonsAverages(
+      @Parameter(name = "period", description = "ALL, 6M, 1M, or 1W")
+          @RequestParam(name = "period", defaultValue = PERIOD_ALL)
+          String period) {
+    log.info("statistics.commonsAverages period={}", period);
+    LocalDateTime cutoff = cutoffForPeriod(period, LocalDateTime.now());
     Map<String, double[]> byCommons = new HashMap<>();
-    for (Review r : approvedReviews()) {
+    for (Review r : filterByCutoff(approvedReviews(), cutoff)) {
       MenuItem item = r.getItem();
       if (item == null || item.getDiningCommonsCode() == null || r.getItemsStars() == null) {
         continue;

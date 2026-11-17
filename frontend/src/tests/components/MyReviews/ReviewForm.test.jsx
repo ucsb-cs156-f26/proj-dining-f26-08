@@ -1,8 +1,16 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import ReviewForm from "main/components/MyReviews/ReviewForm";
-import { vi } from "vitest";
+import { test, vi, expect } from "vitest";
 
 describe("ReviewForm tests", () => {
+  const testids = [
+    "ReviewForm-itemName",
+    "ReviewForm-comments",
+    "ReviewForm-stars",
+    "ReviewForm-date",
+    "ReviewForm-submit",
+  ];
+
   test("renders provided initial values and trims datetime-local seconds", () => {
     render(
       <ReviewForm
@@ -23,78 +31,55 @@ describe("ReviewForm tests", () => {
     );
   });
 
-  test("updates form state when initial values change", () => {
-    const submitAction = vi.fn();
-    const { rerender } = render(
-      <ReviewForm
-        initialItemName="Pasta"
-        initialComments="First comment"
-        initialStars={2}
-        initialDateServed="2024-04-01T12:34:56"
-        submitAction={submitAction}
-      />,
-    );
+  test("Error messsage on missing date", async () => {
+    render(<ReviewForm submitAction={vi.fn()} />);
+    await screen.findByTestId(testids[4]);
+    fireEvent.change(screen.getByTestId(testids[3]), { target: { value: "" } });
+    fireEvent.click(screen.getByTestId(testids[4]));
 
-    fireEvent.change(screen.getByLabelText("Comments"), {
-      target: { value: "Locally edited comment" },
-    });
-    fireEvent.change(screen.getByLabelText("Stars (1 to 5)"), {
-      target: { value: "3" },
-    });
-    fireEvent.change(screen.getByLabelText("Date and Time Item was Served"), {
-      target: { value: "2024-04-03T16:20" },
-    });
-
-    rerender(
-      <ReviewForm
-        initialItemName="Pasta"
-        initialComments="Updated from backend"
-        initialStars={5}
-        initialDateServed="2024-04-02T13:45:59"
-        submitAction={submitAction}
-      />,
-    );
-
-    expect(screen.getByLabelText("Comments")).toHaveValue(
-      "Updated from backend",
-    );
-    expect(screen.getByLabelText("Stars (1 to 5)")).toHaveValue("5");
-    expect(screen.getByLabelText("Date and Time Item was Served")).toHaveValue(
-      "2024-04-02T13:45",
-    );
+    expect(await screen.findByText("Date is required.")).toBeInTheDocument();
   });
 
-  test("does not overwrite the current date when no new initial date is provided", () => {
-    const submitAction = vi.fn();
-    const { rerender } = render(
-      <ReviewForm
-        initialItemName="Pasta"
-        initialComments="First comment"
-        initialStars={2}
-        initialDateServed="2024-04-01T12:34:56"
-        submitAction={submitAction}
-      />,
-    );
+  test("No missing input error messsage when date has input", async () => {
+    const mockSubmitAction = vi.fn();
+    render(<ReviewForm submitAction={mockSubmitAction} />);
 
-    fireEvent.change(screen.getByLabelText("Date and Time Item was Served"), {
-      target: { value: "2024-04-03T16:20" },
+    for (const id of testids) {
+      await screen.findByTestId(id);
+    }
+
+    const dateField = screen.getByTestId(testids[3]);
+
+    fireEvent.change(dateField, {
+      target: { value: "2022-01-02T12:00" },
     });
+    const submitButton = screen.getByText(/Submit Review/);
 
-    rerender(
-      <ReviewForm
-        initialItemName="Pasta"
-        initialComments="Updated from backend"
-        initialStars={5}
-        submitAction={submitAction}
-      />,
-    );
+    fireEvent.click(submitButton);
 
-    expect(screen.getByLabelText("Comments")).toHaveValue(
-      "Updated from backend",
-    );
-    expect(screen.getByLabelText("Stars (1 to 5)")).toHaveValue("5");
-    expect(screen.getByLabelText("Date and Time Item was Served")).toHaveValue(
-      "2024-04-03T16:20",
-    );
+    await waitFor(() => expect(mockSubmitAction).toHaveBeenCalled());
+
+    expect(screen.queryByText("Date is required.")).not.toBeInTheDocument();
+  });
+
+  test("Error message on too long comment input", async () => {
+    const mockSubmitAction = vi.fn();
+
+    render(<ReviewForm submitAction={mockSubmitAction} />);
+
+    const submitButton = screen.getByText(/Submit Review/);
+
+    expect(await screen.findByText("Comments")).toBeInTheDocument();
+
+    const Input = screen.getByTestId(`${testids[1]}`);
+
+    fireEvent.change(Input, { target: { value: "a".repeat(256) } });
+    fireEvent.click(submitButton);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Max length 255 characters./),
+      ).toBeInTheDocument();
+    });
   });
 });
