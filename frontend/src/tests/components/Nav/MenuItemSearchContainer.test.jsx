@@ -77,6 +77,18 @@ describe("MenuItemSearchContainer", () => {
     expect(axiosMock.history.get).toHaveLength(0);
   });
 
+  test("does not show empty results for a whitespace-padded single character", () => {
+    renderSearch();
+
+    type(" a ");
+
+    expect(
+      screen.queryByText("No matching menu items found."),
+    ).not.toBeInTheDocument();
+
+    expect(axiosMock.history.get).toHaveLength(0);
+  });
+
   test("accepts an exactly two-character search", async () => {
     axiosMock.onGet(SEARCH_URL).reply(200, [pizza]);
 
@@ -84,6 +96,19 @@ describe("MenuItemSearchContainer", () => {
     type("pi");
 
     expect(await screen.findByText("Cheese Pizza")).toBeInTheDocument();
+    expect(axiosMock.history.get[0].params).toEqual({ q: "pi" });
+  });
+
+  test("shows no-results message for an exactly two-character search", async () => {
+    axiosMock.onGet(SEARCH_URL).reply(200, []);
+
+    renderSearch();
+    type("pi");
+
+    expect(
+      await screen.findByText("No matching menu items found."),
+    ).toBeInTheDocument();
+
     expect(axiosMock.history.get[0].params).toEqual({ q: "pi" });
   });
 
