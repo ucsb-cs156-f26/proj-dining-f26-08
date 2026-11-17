@@ -28,28 +28,48 @@ reliable for this when both apps live on the same Dokku host, since they then sh
 bridge network and the caller's IP is just an internal address that means nothing outside the host.
 Skipping this step doesn't break anything; the app still works, it just won't self-identify.
 
-Substitute your own app name for `dining` below. Note this uses `dokku docker-options:add` rather than
-`dokku config:set` on purpose: it lets dokku fill in the app's own name and host automatically, rather
-than requiring you to type the app name a second time as a literal value — a command like
-`dokku config:set dining-qa APP_NAME=dining-qa` has two places the app name has to match, and a
-copy/paste slip (e.g. running it against `dining-qa` but leaving `dining` in the value) fails silently.
+Run these in your shell on the dokku server (after you `ssh` in). Set `APP` to your app name once;
+it's then used both as the app to configure and as the value of `APP_NAME`, so the two can't get out
+of sync through a copy/paste slip. `$(hostname -f)` is filled in by your shell with the dokku server's
+name before the command runs.
 
 ```
-dokku docker-options:add dining deploy,run '--env=APP_NAME=$(echo $DOCKER_RUN_LABEL_ARGS | sed -n "s/.*--label=com\.dokku\.app-name=\([^ ]*\).*/\1/p")'
-dokku docker-options:add dining deploy,run '--env=APP_HOSTNAME=$(hostname -f)'
-dokku ps:rebuild dining
+APP=dining
+dokku config:set $APP APP_NAME=$APP APP_HOSTNAME=$(hostname -f)
 ```
+
+`config:set` restarts the app, so no rebuild is needed.
 
 Confirm it worked:
 
 ```
-dokku enter dining web env | grep -E 'APP_NAME|APP_HOSTNAME'
+dokku enter $APP web env | grep -E 'APP_NAME|APP_HOSTNAME'
 ```
 
-**Note:** the `APP_NAME` line relies on an internal, undocumented dokku implementation detail (the
-`DOCKER_RUN_LABEL_ARGS` variable and the `com.dokku.app-name` container label), not a stable public
-dokku API. If a future dokku upgrade changes that internal naming, `APP_NAME` will silently fall back
-to `app-name-unset` rather than error — that's the sign to come back and re-check this command.
+The output should show your app's name and dokku server, for example:
+
+```
+APP_HOSTNAME=dokku-00.cs.ucsb.edu
+APP_NAME=dining
+```
+
+If either line shows `$(...)` text instead, the app was set up with the older instructions below.
+
+#### Apps set up with the older instructions
+
+An earlier version of this section used `dokku docker-options:add` with `$(...)` commands, expecting
+dokku to evaluate them when the container starts. Our dokku servers don't evaluate them: the container
+gets the literal command text, so the `X-Requesting-App` header contains that text instead of the app
+name. To fix an app set up that way, remove the old options, then run the `config:set` command above:
+
+```
+APP=dining
+dokku docker-options:remove $APP deploy,run '--env=APP_NAME=$(echo $DOCKER_RUN_LABEL_ARGS | sed -n "s/.*--label=com\.dokku\.app-name=\([^ ]*\).*/\1/p")'
+dokku docker-options:remove $APP deploy,run '--env=APP_HOSTNAME=$(hostname -f)'
+dokku docker-options:report $APP
+```
+
+The report should no longer list any `--env=APP_NAME` or `--env=APP_HOSTNAME` options.
 
 ### Create `dining`
 
