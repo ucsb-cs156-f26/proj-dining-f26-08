@@ -1,5 +1,5 @@
-import React, { useEffect } from "react";
-import { Form, Button } from "react-bootstrap";
+import { Form, Button, Row, Col } from "react-bootstrap";
+import { useForm } from "react-hook-form";
 
 function dateTimeLocalValue(dateTime) {
   return dateTime
@@ -15,35 +15,30 @@ export default function ReviewForm({
   submitAction,
   submitButtonText = "Submit Review",
 }) {
-  const [comments, setComments] = React.useState(initialComments);
-  const [stars, setStars] = React.useState(initialStars);
-  const [dateServed, setDateServed] = React.useState(() =>
-    dateTimeLocalValue(initialDateServed),
-  );
+  // Stryker disable all
+  const {
+    register,
+    formState: { errors },
+    handleSubmit,
+  } = useForm({
+    defaultValues: {
+      reviewerComments: initialComments,
+      itemsStars: initialStars,
+      dateItemServed: dateTimeLocalValue(initialDateServed),
+    },
+  });
 
-  useEffect(() => {
-    setComments(initialComments);
-    setStars(initialStars);
-    if (initialDateServed) {
-      setDateServed(dateTimeLocalValue(initialDateServed));
-    }
-  }, [initialComments, initialDateServed, initialStars]);
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    submitAction({
-      reviewerComments: comments,
-      itemsStars: stars,
-      dateItemServed: dateServed,
-    });
-  };
+  const isodate_regex =
+    /(\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+)|(\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d)|(\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d)/i;
+  // Stryker restore all
 
   return (
-    <Form onSubmit={handleSubmit}>
+    <Form onSubmit={handleSubmit(submitAction)}>
       <Form.Group className="mb-3">
-        <Form.Label htmlFor="review-item-name">Item Name</Form.Label>
+        <Form.Label htmlFor="itemName">Item Name</Form.Label>
         <Form.Control
-          id="review-item-name"
+          data-testid="ReviewForm-itemName"
+          id="itemName"
           type="text"
           value={initialItemName}
           disabled
@@ -51,22 +46,33 @@ export default function ReviewForm({
       </Form.Group>
 
       <Form.Group className="mb-3">
-        <Form.Label htmlFor="review-comments">Comments</Form.Label>
+        <Form.Label htmlFor="comments">Comments</Form.Label>
         <Form.Control
-          id="review-comments"
+          data-testid="ReviewForm-comments"
+          id="comments"
           as="textarea"
           rows={3}
-          value={comments}
-          onChange={(e) => setComments(e.target.value)}
+          isInvalid={Boolean(errors.reviewerComments)}
+          {...register("reviewerComments", {
+            maxLength: {
+              value: 255,
+              message: "Max length 255 characters.",
+            },
+          })}
         />
+        <Form.Control.Feedback type="invalid">
+          {errors.reviewerComments?.message}
+        </Form.Control.Feedback>
       </Form.Group>
 
       <Form.Group className="mb-3">
-        <Form.Label htmlFor="review-stars">Stars (1 to 5)</Form.Label>
+        <Form.Label htmlFor="Stars">Stars (1 to 5)</Form.Label>
         <Form.Select
-          id="review-stars"
-          value={stars}
-          onChange={(e) => setStars(Number(e.target.value))}
+          data-testid="ReviewForm-stars"
+          id="Stars"
+          {...register("itemsStars", {
+            valueAsNumber: true,
+          })}
         >
           {[1, 2, 3, 4, 5].map((num) => (
             <option key={num} value={num}>
@@ -77,18 +83,31 @@ export default function ReviewForm({
       </Form.Group>
 
       <Form.Group className="mb-3">
-        <Form.Label htmlFor="review-date">
+        <Form.Label htmlFor="dateItemServed">
           Date and Time Item was Served
         </Form.Label>
         <Form.Control
-          id="review-date"
+          data-testid="ReviewForm-date"
+          id="dateItemServed"
           type="datetime-local"
-          value={dateServed}
-          onChange={(e) => setDateServed(e.target.value)}
+          isInvalid={Boolean(errors.dateItemServed)}
+          {...register("dateItemServed", {
+            required: "Date is required.",
+            pattern: isodate_regex,
+          })}
         />
+        <Form.Control.Feedback type="invalid">
+          {errors.dateItemServed?.message}
+        </Form.Control.Feedback>
       </Form.Group>
 
-      <Button type="submit">{submitButtonText}</Button>
+      <Row>
+        <Col>
+          <Button type="submit" data-testid="ReviewForm-submit">
+            {submitButtonText}
+          </Button>
+        </Col>
+      </Row>
     </Form>
   );
 }

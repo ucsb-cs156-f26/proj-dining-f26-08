@@ -1,0 +1,103 @@
+/* ============ Fonts ============ */
+@import url("https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&display=swap");
+
+/* ============ Palette & global variables ============ */
+:root {
+  --dining-navy: #003660;
+  --dining-navy-dark: #00264a;
+  --dining-gold: #febc11;
+  --dining-gold-dark: #e0a400;
+  --dining-cream: #fdf8ef;
+
+  /* Bootstrap's own variables: these change things app-wide */
+  --bs-body-font-family: "Nunito", system-ui, sans-serif;
+  --bs-body-bg: var(--dining-cream);
+  --bs-body-color: #2b2b2b;
+  --bs-primary: #003660;
+  --bs-primary-rgb: 0, 54, 96;
+  --bs-link-color-rgb: 0, 54, 96;
+  --bs-link-hover-color-rgb: 224, 164, 0;
+  --bs-border-radius: 0.75rem;
+  --bs-border-radius-lg: 1rem;
+}
+
+h1, h2, h3, h4 {
+  font-weight: 800;
+  color: var(--dining-navy);
+}
+
+/* ============ Navbar ============ */
+/* The navbar uses bg="dark", so recolor "dark" inside the navbar only */
+.navbar.bg-dark {
+  --bs-dark-rgb: 0, 54, 96;
+  border-bottom: 4px solid var(--dining-gold);
+}
+.navbar-brand {
+  font-weight: 800;
+  color: var(--dining-gold) !important;
+}
+.navbar .nav-link:hover {
+  color: var(--dining-gold) !important;
+}
+
+/* ============ Buttons ============ */
+.btn {
+  border-radius: 2rem;
+  font-weight: 600;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+}
+.btn-primary {
+  --bs-btn-bg: var(--dining-navy);
+  --bs-btn-border-color: var(--dining-navy);
+  --bs-btn-hover-bg: var(--dining-navy-dark);
+  --bs-btn-hover-border-color: var(--dining-navy-dark);
+  --bs-btn-active-bg: var(--dining-navy-dark);
+}
+.btn-warning, .btn-secondary {
+  --bs-btn-bg: var(--dining-gold);
+  --bs-btn-border-color: var(--dining-gold);
+  --bs-btn-color: var(--dining-navy);
+  --bs-btn-hover-bg: var(--dining-gold-dark);
+  --bs-btn-hover-border-color: var(--dining-gold-dark);
+  --bs-btn-hover-color: var(--dining-navy);
+}
+
+/* ============ Cards ============ */
+.card {
+  border: none;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+.card-header {
+  background-color: var(--dining-navy);
+  color: white;
+  font-weight: 700;
+}
+
+/* ============ Tables ============ */
+.table {
+  --bs-table-bg: white;
+  --bs-table-striped-bg: #f4efe4;
+  border-radius: var(--bs-border-radius);
+  overflow: hidden;
+}
+.table thead th {
+  background-color: var(--dining-navy);
+  color: white;
+}
+
+/* ============ Forms ============ */
+.form-control:focus, .form-select:focus {
+  border-color: var(--dining-gold);
+  box-shadow: 0 0 0 0.25rem rgba(254, 188, 17, 0.3);
+}
+
+/* ============ Modals ============ */
+.modal-content {
+  border: none;
+  border-radius: var(--bs-border-radius-lg);
+}
+.modal-header {
+  background-color: var(--dining-navy);
+  color: white;
+}

@@ -56,6 +56,11 @@ describe("CommonsAveragesOverTimePage tests", () => {
           "CommonsAveragesOverTimePage-table-cell-row-0-col-period",
         ),
       ).toHaveTextContent("2025-03");
+      expect(
+        screen.getByRole("img", {
+          name: "Average review scores by dining commons over time",
+        }),
+      ).toBeInTheDocument();
     });
   });
 
@@ -100,5 +105,6 @@ describe("CommonsAveragesOverTimePage tests", () => {
     expect(
       await screen.findByTestId("CommonsAveragesOverTimePage-empty"),
     ).toHaveTextContent("No reviews available yet.");
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
   });
 });
