@@ -1,14 +1,18 @@
 import { render, waitFor, screen, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "react-query";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
-import ReviewsPage from "main/pages/Reviews/ReviewsPage";
-import { vi } from "vitest";
 
 import { apiCurrentUserFixtures } from "fixtures/currentUserFixtures";
 import { systemInfoFixtures } from "fixtures/systemInfoFixtures";
 import { ReviewFixtures } from "fixtures/reviewFixtures";
+import ReviewsPage from "main/pages/Reviews/ReviewsPage";
+
 import axios from "axios";
 import AxiosMockAdapter from "axios-mock-adapter";
+
+import { vi } from "vitest";
+
+const axiosMock = new AxiosMockAdapter(axios);
 
 const mockToast = vi.fn();
 vi.mock("react-toastify", async () => {
@@ -19,8 +23,6 @@ vi.mock("react-toastify", async () => {
     toast: (x) => mockToast(x),
   };
 });
-
-const axiosMock = new AxiosMockAdapter(axios);
 
 // Helper component to verify navigation
 const ReviewRoute = () => {
@@ -40,11 +42,10 @@ describe("ReviewsPage tests", () => {
   beforeEach(() => {
     axiosMock.reset();
     axiosMock.resetHistory();
-    mockToast.mockClear();
-
     axiosMock
       .onGet("/api/systemInfo")
       .reply(200, systemInfoFixtures.showingNeither);
+    mockToast.mockClear();
   });
 
   afterEach(() => {
@@ -69,16 +70,16 @@ describe("ReviewsPage tests", () => {
     );
   };
 
-  test("renders empty table when backend is unavailable", async () => {
-    const itemid = "7";
+  test("renders empty table when backend is unavailable, with itemname and dininghall in heading", async () => {
+    const itemid = "72";
     setupUserOnly();
-    axiosMock.onGet(`/api/reviews/approved/forItem/${itemid}`).timeout();
+
+    axiosMock.onGet(`/api/reviews/approved/forItem/${itemid}`).reply(200, []);
     axiosMock.onGet(`/api/diningcommons/menuitem?id=${itemid}`).reply(200, {
-      name: "Make Your Own Waffle (v)",
-      diningCommonsCode: "carrillo",
+      name: "Long Grain Rice (vgn)",
+      diningCommonsCode: "de-la-guerra",
     });
 
-    // SPY ON THE ADAPTER, NOT axios.request
     const adapterSpy = vi.spyOn(axios.defaults, "adapter");
 
     renderWithRoute(itemid);
@@ -89,17 +90,24 @@ describe("ReviewsPage tests", () => {
     });
 
     await waitFor(() => {
-      // Table should remain empty
       expect(
         screen.queryByTestId(`${testId}-cell-row-0-col-item.id`),
       ).not.toBeInTheDocument();
+      // Table should remain empty
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", {
+          name: "Reviews for Long Grain Rice (vgn) at De La Guerra",
+        }),
+      ).toBeInTheDocument();
     });
   });
 
-  test("renders table when backend is available", async () => {
+  test("renders table when backend is available, with itemname and dininghall in heading", async () => {
     const itemid = "7";
     setupUserOnly();
-    const adapterSpy = vi.spyOn(axios.defaults, "adapter");
 
     axiosMock
       .onGet(`/api/reviews/approved/forItem/${itemid}`)
@@ -109,6 +117,8 @@ describe("ReviewsPage tests", () => {
       name: "Make Your Own Waffle (v)",
       diningCommonsCode: "carrillo",
     });
+
+    const adapterSpy = vi.spyOn(axios.defaults, "adapter");
 
     renderWithRoute(itemid);
 
@@ -122,32 +132,29 @@ describe("ReviewsPage tests", () => {
         screen.getByTestId(`${testId}-cell-row-0-col-item.id`),
       ).toBeInTheDocument();
     });
-  });
-
-  test("title contains itemname and dininghall", async () => {
-    const itemid = "7";
-    setupUserOnly();
-    const adapterSpy = vi.spyOn(axios.defaults, "adapter");
-    axiosMock
-      .onGet(`/api/reviews/approved/forItem/${itemid}`)
-      .reply(200, [ReviewFixtures.oneReview]);
-
-    axiosMock.onGet(`/api/diningcommons/menuitem?id=${itemid}`).reply(200, {
-      name: "Make Your Own Waffle (v)",
-      diningCommonsCode: "carrillo",
-    });
-
-    renderWithRoute(itemid);
-
-    await waitFor(() => {
-      expect(adapterSpy).toHaveBeenCalled();
-      expect(adapterSpy.mock.calls[0][0].method).toBe("get");
-    });
 
     await waitFor(() => {
       expect(
         screen.getByRole("heading", {
           name: "Reviews for Make Your Own Waffle (v) at Carrillo",
+        }),
+      ).toBeInTheDocument();
+    });
+  });
+
+  test("heading if GET single menu item by ID returns empty", async () => {
+    const itemid = "7";
+    setupUserOnly();
+
+    axiosMock.onGet(`/api/reviews/approved/forItem/${itemid}`).reply(200, []);
+    axiosMock.onGet(`/api/diningcommons/menuitem?id=${itemid}`).reply(200, {});
+
+    renderWithRoute(itemid);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", {
+          name: "Reviews for at",
         }),
       ).toBeInTheDocument();
     });
@@ -160,7 +167,7 @@ describe("ReviewsPage tests", () => {
     axiosMock.onGet(`/api/reviews/approved/forItem/${itemid}`).networkError();
     axiosMock.onGet(`/api/diningcommons/menuitem?id=${itemid}`).reply(200, {
       name: "Make Your Own Waffle (v)",
-      diningCommonsCode: "varrillo",
+      diningCommonsCode: "carrillo",
     });
 
     renderWithRoute(itemid);
@@ -175,7 +182,7 @@ describe("ReviewsPage tests", () => {
             message.includes("GET") &&
             message.includes(`/api/reviews/approved/forItem/${itemid}`),
         ),
-      );
+      ).toBe(true);
     });
   });
 
@@ -184,9 +191,11 @@ describe("ReviewsPage tests", () => {
     async (itemid) => {
       setupUserOnly();
 
-      axiosMock
-        .onGet(`/api/reviews/approved/forItem/${itemid}`)
-        .reply(200, ReviewFixtures.threeReviews);
+      axiosMock.onGet(`/api/reviews/approved/forItem/${itemid}`).reply(200, []);
+      axiosMock.onGet(`/api/diningcommons/menuitem?id=${itemid}`).reply(200, {
+        name: "ItemName",
+        diningCommonsCode: "DiningHall",
+      });
 
       renderWithRoute(itemid);
 

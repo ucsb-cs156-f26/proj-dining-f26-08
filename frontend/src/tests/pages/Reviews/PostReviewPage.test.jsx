@@ -65,14 +65,14 @@ describe("MyReviewsCreatePage - full coverage tests", () => {
   });
 
   test("title contains itemname and dininghall", async () => {
-    axiosMock.onGet("/api/diningcommons/menuitem?id=175").reply(200, {
-      name: "Oatmeal (vgn)",
-      diningCommonsCode: "carrillo",
+    axiosMock.onGet("/api/diningcommons/menuitem?id=72").reply(200, {
+      name: "Long Grain Rice (vgn)",
+      diningCommonsCode: "de-la-guerra",
     });
     axiosMock.onPost("/api/reviews/post").reply(200, {});
     render(
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={["/reviews/post/175"]}>
+        <MemoryRouter initialEntries={["/reviews/post/72"]}>
           <Routes>
             <Route path="/reviews/post/:id" element={<PostReviewPage />} />
           </Routes>
@@ -84,7 +84,30 @@ describe("MyReviewsCreatePage - full coverage tests", () => {
     await waitFor(() => {
       expect(
         screen.getByRole("heading", {
-          name: "Post a review for Oatmeal (vgn) at Carrillo",
+          name: "Post a review for Long Grain Rice (vgn) at De La Guerra",
+        }),
+      ).toBeInTheDocument();
+    });
+  });
+
+  test("heading if GET single menu item by ID returns empty", async () => {
+    axiosMock.onGet("/api/diningcommons/menuitem?id=72").reply(200, {});
+    axiosMock.onPost("/api/reviews/post").reply(200, {});
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={["/reviews/post/72"]}>
+          <Routes>
+            <Route path="/reviews/post/:id" element={<PostReviewPage />} />
+          </Routes>
+          <ToastContainer />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", {
+          name: "Post a review for at",
         }),
       ).toBeInTheDocument();
     });
