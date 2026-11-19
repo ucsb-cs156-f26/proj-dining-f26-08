@@ -41,6 +41,7 @@ export function useBackend(queryKey, axiosParameters, initialData) {
     },
     {
       initialData:
+        // Stryker disable next-line ConditionalExpression : passing initialData: undefined is equivalent to omitting it in react-query
         initialData !== undefined
           ? { data: initialData, status: 200 }
           : undefined,

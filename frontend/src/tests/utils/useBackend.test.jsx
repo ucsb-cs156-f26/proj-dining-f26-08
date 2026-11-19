@@ -133,6 +133,71 @@ describe("utils/useBackend tests", () => {
         "Error communicating with backend via GET on /api/admin/users",
       );
     });
+
+    test("useBackend with no initialData starts out loading, with no data and no status", async () => {
+      const { wrapper } = createWrapper();
+      axiosMock = new AxiosMockAdapter(axios);
+      axiosMock.onGet("/api/things").reply(200, ["from server"]);
+
+      const { result } = renderHook(
+        () =>
+          useBackend(["/api/things"], { method: "GET", url: "/api/things" }),
+        { wrapper },
+      );
+
+      // Synchronously after the first render, before the request resolves.
+      // If useBackend always built an initialData object, status would already
+      // be 200 and isLoading would be false.
+      expect(result.current.data).toBeUndefined();
+      expect(result.current.status).toBeUndefined();
+      expect(result.current.isLoading).toBe(true);
+
+      await waitFor(() => expect(result.current.data).toEqual(["from server"]));
+      expect(result.current.status).toBe(200);
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    test("useBackend with no initialData leaves data and status undefined after a failed request", async () => {
+      const { wrapper } = createWrapper();
+      axiosMock = new AxiosMockAdapter(axios);
+      axiosMock.onGet("/api/things").reply(500);
+
+      const { result } = renderHook(
+        () =>
+          useBackend(["/api/things"], { method: "GET", url: "/api/things" }),
+        { wrapper },
+      );
+
+      await waitFor(() => expect(result.current.isError).toBe(true));
+      expect(result.current.data).toBeUndefined();
+      expect(result.current.status).toBeUndefined();
+      expect(mockToast).toHaveBeenCalledWith(
+        "Error communicating with backend via GET on /api/things",
+      );
+    });
+
+    test("useBackend with initialData starts out with that data and status 200", async () => {
+      const { wrapper } = createWrapper();
+      axiosMock = new AxiosMockAdapter(axios);
+      axiosMock.onGet("/api/things").reply(200, ["from server"]);
+
+      const { result } = renderHook(
+        () =>
+          useBackend(
+            ["/api/things"],
+            { method: "GET", url: "/api/things" },
+            [],
+          ),
+        { wrapper },
+      );
+
+      // Synchronously after the first render, before the request resolves
+      expect(result.current.data).toEqual([]);
+      expect(result.current.status).toBe(200);
+      expect(result.current.isLoading).toBe(false);
+
+      await waitFor(() => expect(result.current.data).toEqual(["from server"]));
+    });
   });
 
   describe("utils/useBackend useBackendMutation tests", () => {
