@@ -40,6 +40,7 @@ describe("ReviewsPage tests", () => {
   afterEach(() => {
     axiosMock.reset();
     axiosMock.resetHistory();
+    mockToast.mockClear();
   });
 
   const renderWithRoute = (itemid) => {
@@ -59,6 +60,10 @@ describe("ReviewsPage tests", () => {
     const itemid = "7";
     setupUserOnly();
     axiosMock.onGet(`/api/reviews/approved/forItem/${itemid}`).timeout();
+    axiosMock.onGet(`/api/diningcommons/menuitem?id=${itemid}`).reply(200, {
+      name: "Make Your Own Waffle (v)",
+      diningCommonsCode: "carrillo",
+    });
 
     // SPY ON THE ADAPTER, NOT axios.request
     const adapterSpy = vi.spyOn(axios.defaults, "adapter");
@@ -84,7 +89,12 @@ describe("ReviewsPage tests", () => {
     const adapterSpy = vi.spyOn(axios.defaults, "adapter");
     axiosMock
       .onGet(`/api/reviews/approved/forItem/${itemid}`)
-      .reply(200, ReviewFixtures.threeReviews);
+      .reply(200, [ReviewFixtures.oneReview]);
+
+    axiosMock.onGet(`/api/diningcommons/menuitem?id=${itemid}`).reply(200, {
+      name: "Make Your Own Waffle (v)",
+      diningCommonsCode: "carrillo",
+    });
 
     renderWithRoute(itemid);
 
@@ -100,19 +110,58 @@ describe("ReviewsPage tests", () => {
     });
   });
 
+  test("title contains itemname and dininghall", async () => {
+    const itemid = "7";
+    setupUserOnly();
+    const adapterSpy = vi.spyOn(axios.defaults, "adapter");
+    axiosMock
+      .onGet(`/api/reviews/approved/forItem/${itemid}`)
+      .reply(200, [ReviewFixtures.oneReview]);
+
+    axiosMock.onGet(`/api/diningcommons/menuitem?id=${itemid}`).reply(200, {
+      name: "Make Your Own Waffle (v)",
+      diningCommonsCode: "carrillo",
+    });
+
+    renderWithRoute(itemid);
+
+    await waitFor(() => {
+      expect(adapterSpy).toHaveBeenCalled();
+      expect(adapterSpy.mock.calls[0][0].method).toBe("get");
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", {
+          name: "Reviews for Make Your Own Waffle (v) at Carrillo",
+        }),
+      ).toBeInTheDocument();
+    });
+  });
+
   test("Error message includes GET method when request fails", async () => {
-    const itemId = "7";
+    const itemid = "7";
     setupUserOnly();
 
-    axiosMock.onGet(`/api/reviews/approved/forItem/${itemId}`).networkError();
+    axiosMock.onGet(`/api/reviews/approved/forItem/${itemid}`).networkError();
+    axiosMock.onGet(`/api/diningcommons/menuitem?id=${itemid}`).reply(200, {
+      name: "Make Your Own Waffle (v)",
+      diningCommonsCode: "varrillo",
+    });
 
-    renderWithRoute(itemId);
+    renderWithRoute(itemid);
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalled();
-      const toastMessage = mockToast.mock.calls[0][0];
-      expect(toastMessage).toContain("GET");
-      expect(toastMessage).toContain(`/api/reviews/approved/forItem/${itemId}`);
+
+      const toastMessages = mockToast.mock.calls.map((call) => call[0]);
+      expect(
+        toastMessages.some(
+          (message) =>
+            message.includes("GET") &&
+            message.includes(`/api/reviews/approved/forItem/${itemid}`),
+        ),
+      );
     });
   });
 });
