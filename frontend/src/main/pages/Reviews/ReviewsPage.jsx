@@ -21,6 +21,7 @@ export default function ReviewsPage() {
     [`/api/reviews/approved/forItem/${itemid}`],
     // Stryker disable next-line all : don't test internal caching of React Query
     { method: "GET", url: `/api/reviews/approved/forItem/${itemid}` },
+    // Stryker disable next-line all : Don't test empty initial data
     [],
   );
 
@@ -38,8 +39,8 @@ export default function ReviewsPage() {
     [],
   );
 
-  const itemName = menuItems?.name ?? "";
-  const diningHall = menuItems?.diningCommonsCode
+  const itemName = menuItems.name ?? "";
+  const diningHall = menuItems.diningCommonsCode
     ? capitalizeString(menuItems.diningCommonsCode)
     : "";
 

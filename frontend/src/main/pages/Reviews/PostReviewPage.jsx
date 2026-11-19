@@ -28,8 +28,8 @@ export default function PostReviewPage() {
     [],
   );
 
-  const itemName = menuItems?.name ?? "";
-  const diningHall = menuItems?.diningCommonsCode
+  const itemName = menuItems.name ?? "";
+  const diningHall = menuItems.diningCommonsCode
     ? capitalizeString(menuItems.diningCommonsCode)
     : "";
 
