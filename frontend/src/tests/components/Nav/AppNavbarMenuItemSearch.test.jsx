@@ -41,9 +41,10 @@ describe("AppNavbar menu search", () => {
     expect(screen.getByText(/Welcome, student@ucsb.edu/)).toBeInTheDocument();
   });
 
-  test("does not display the search field for a logged-out visitor", () => {
+  test("displays the search field for a logged-out visitor", () => {
     renderNavbar(null);
 
-    expect(screen.queryByTestId("navbar-menu-search")).not.toBeInTheDocument();
+    expect(screen.getByTestId("navbar-menu-search")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Log In" })).toBeInTheDocument();
   });
 });

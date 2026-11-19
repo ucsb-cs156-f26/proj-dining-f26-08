@@ -152,14 +152,12 @@ export default function AppNavbar({
               )}
             </Nav>
 
-            {currentUser?.loggedIn && (
-              <div
-                className="mx-xl-3 my-2 my-xl-0 flex-grow-1"
-                style={{ maxWidth: 340, minWidth: 0 }}
-              >
-                <MenuItemSearchContainer />
-              </div>
-            )}
+            <div
+              className="mx-xl-3 my-2 my-xl-0 flex-grow-1"
+              style={{ maxWidth: 340, minWidth: 0 }}
+            >
+              <MenuItemSearchContainer />
+            </div>
 
             <Nav className="ml-auto">
               {currentUser && currentUser.loggedIn ? (
