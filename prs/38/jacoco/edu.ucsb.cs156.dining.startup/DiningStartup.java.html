@@ -27,6 +27,9 @@ import org.springframework.stereotype.Component;
   @Value(&quot;${app.ucsb.api.consumer_key}&quot;)
   String apiKey;
 
+  @Value(&quot;${app.startup.loadMonthMenuItems:true}&quot;)
+  boolean loadMonthMenuItems;
+
   @Autowired AdminRepository adminRepository;
   @Autowired JobService jobService;
   @Autowired DiningCommonsService diningCommonsService;
@@ -39,33 +42,36 @@ import org.springframework.stereotype.Component;
    */
   @EventListener(ApplicationReadyEvent.class)
   public void alwaysRunOnStartup() {
-<span class="fc" id="L42">    log.info(&quot;alwaysRunOnStartup called&quot;);</span>
+<span class="fc" id="L45">    log.info(&quot;alwaysRunOnStartup called&quot;);</span>
 
-<span class="fc" id="L44">    adminEmails.forEach(</span>
+<span class="fc" id="L47">    adminEmails.forEach(</span>
         (email) -&gt; {
           try {
-<span class="fc bfc" id="L47" title="All 2 branches covered.">            if (!adminRepository.existsByEmail(email)) {</span>
-<span class="fc" id="L48">              Admin admin = new Admin(email);</span>
-<span class="fc" id="L49">              adminRepository.save(admin);</span>
+<span class="fc bfc" id="L50" title="All 2 branches covered.">            if (!adminRepository.existsByEmail(email)) {</span>
+<span class="fc" id="L51">              Admin admin = new Admin(email);</span>
+<span class="fc" id="L52">              adminRepository.save(admin);</span>
             }
-<span class="fc" id="L51">          } catch (Exception e) {</span>
-<span class="fc" id="L52">            log.error(&quot;Error saving admin email {}: {}&quot;, email, e.getMessage());</span>
-<span class="fc" id="L53">          }</span>
-<span class="fc" id="L54">        });</span>
-
-    try {
-<span class="fc" id="L57">      jobService.runAsJob(</span>
-<span class="fc" id="L58">          LoadMonthMenuItemsJob.builder()</span>
-<span class="fc" id="L59">              .diningCommonsService(diningCommonsService)</span>
-<span class="fc" id="L60">              .menuService(menuService)</span>
-<span class="fc" id="L61">              .menuItemsService(menuItemsService)</span>
-<span class="fc" id="L62">              .apiKey(apiKey)</span>
-<span class="fc" id="L63">              .month(YearMonth.now())</span>
-<span class="fc" id="L64">              .sleeper(Thread::sleep)</span>
-<span class="fc" id="L65">              .build());</span>
-<span class="fc" id="L66">    } catch (Exception e) {</span>
-<span class="fc" id="L67">      log.error(&quot;Failed to start menu item download job: {}&quot;, e.getMessage());</span>
-<span class="fc" id="L68">    }</span>
-<span class="fc" id="L69">  }</span>
+<span class="fc" id="L54">          } catch (Exception e) {</span>
+<span class="fc" id="L55">            log.error(&quot;Error saving admin email {}: {}&quot;, email, e.getMessage());</span>
+<span class="fc" id="L56">          }</span>
+<span class="fc" id="L57">        });</span>
+<span class="fc bfc" id="L58" title="All 2 branches covered.">    if (loadMonthMenuItems) {</span>
+      try {
+<span class="fc" id="L60">        jobService.runAsJob(</span>
+<span class="fc" id="L61">            LoadMonthMenuItemsJob.builder()</span>
+<span class="fc" id="L62">                .diningCommonsService(diningCommonsService)</span>
+<span class="fc" id="L63">                .menuService(menuService)</span>
+<span class="fc" id="L64">                .menuItemsService(menuItemsService)</span>
+<span class="fc" id="L65">                .apiKey(apiKey)</span>
+<span class="fc" id="L66">                .month(YearMonth.now())</span>
+<span class="fc" id="L67">                .sleeper(Thread::sleep)</span>
+<span class="fc" id="L68">                .build());</span>
+<span class="fc" id="L69">      } catch (Exception e) {</span>
+<span class="fc" id="L70">        log.error(&quot;Failed to start menu item download job: {}&quot;, e.getMessage());</span>
+<span class="fc" id="L71">      }</span>
+    } else {
+<span class="fc" id="L73">      log.info(&quot;Skipping menu item download job (app.startup.loadMonthMenuItems=false)&quot;);</span>
+    }
+<span class="fc" id="L75">  }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
