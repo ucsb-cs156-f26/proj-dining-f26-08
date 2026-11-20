@@ -27,6 +27,9 @@ public class DiningStartup {
   @Value("${app.ucsb.api.consumer_key}")
   String apiKey;
 
+  @Value("${app.startup.loadMonthMenuItems:true}")
+  boolean loadMonthMenuItems;
+
   @Autowired AdminRepository adminRepository;
   @Autowired JobService jobService;
   @Autowired DiningCommonsService diningCommonsService;
@@ -52,19 +55,22 @@ public class DiningStartup {
             log.error("Error saving admin email {}: {}", email, e.getMessage());
           }
         });
-
-    try {
-      jobService.runAsJob(
-          LoadMonthMenuItemsJob.builder()
-              .diningCommonsService(diningCommonsService)
-              .menuService(menuService)
-              .menuItemsService(menuItemsService)
-              .apiKey(apiKey)
-              .month(YearMonth.now())
-              .sleeper(Thread::sleep)
-              .build());
-    } catch (Exception e) {
-      log.error("Failed to start menu item download job: {}", e.getMessage());
+    if (loadMonthMenuItems) {
+      try {
+        jobService.runAsJob(
+            LoadMonthMenuItemsJob.builder()
+                .diningCommonsService(diningCommonsService)
+                .menuService(menuService)
+                .menuItemsService(menuItemsService)
+                .apiKey(apiKey)
+                .month(YearMonth.now())
+                .sleeper(Thread::sleep)
+                .build());
+      } catch (Exception e) {
+        log.error("Failed to start menu item download job: {}", e.getMessage());
+      }
+    } else {
+      log.info("Skipping menu item download job (app.startup.loadMonthMenuItems=false)");
     }
   }
 }

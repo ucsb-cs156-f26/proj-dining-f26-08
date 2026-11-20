@@ -41,6 +41,7 @@ class DiningStartupTests {
     diningStartup.menuService = menuService;
     diningStartup.menuItemsService = menuItemsService;
     diningStartup.apiKey = "test-key";
+    diningStartup.loadMonthMenuItems = true;
   }
 
   @Test
@@ -118,6 +119,18 @@ class DiningStartupTests {
     assertDoesNotThrow(() -> diningStartup.alwaysRunOnStartup());
 
     // admins are still loaded even though the job failed to start
+    verify(adminRepository, times(2)).save(any(Admin.class));
+  }
+
+  @Test
+  void test_AlwaysRunOnStartup_skips_job_when_disabled() {
+    diningStartup.loadMonthMenuItems = false;
+    when(adminRepository.existsByEmail(anyString())).thenReturn(false);
+
+    diningStartup.alwaysRunOnStartup();
+
+    verifyNoInteractions(jobService);
+    // admins are still loaded when the job is disabled
     verify(adminRepository, times(2)).save(any(Admin.class));
   }
 }
