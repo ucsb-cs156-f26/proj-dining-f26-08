@@ -4,6 +4,10 @@ import BasicLayout from "main/layouts/BasicLayout/BasicLayout";
 import MenuItemTable from "main/components/MenuItem/MenuItemTable";
 import { useParams } from "react-router";
 
+function capitalizeString(str) {
+  return str.replace(/-/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
 export default function MenuItemPage() {
   const currentUser = useCurrentUser();
   const {
@@ -25,7 +29,7 @@ export default function MenuItemPage() {
 
   return (
     <BasicLayout>
-      <h2>{meal.at(0).toUpperCase() + meal.substring(1)}</h2>
+      <h2>{`${meal.at(0).toUpperCase() + meal.substring(1)} at ${capitalizeString(diningCommons)}`}</h2>
       <MenuItemTable currentUser={currentUser} menuItems={menuItems} />
     </BasicLayout>
   );
