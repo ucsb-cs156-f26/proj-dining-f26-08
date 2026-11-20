@@ -8,12 +8,11 @@ Note: CMPSC 156 Student teams should not change the prod/qa links below to match
 
 | Deployment | URL |
 |-|-|
-| production | <https://dining.dokku-00.cs.ucsb.edu> |
-| qa | <https://dining-qa.dokku-00.cs.ucsb.edu> |
+| production | <https://dining.dokku-08.cs.ucsb.edu> |
+| qa | <https://dining-qa.dokku-08.cs.ucsb.edu> |
 
 Sprint Planning Doc:
 * <https://docs.google.com/document/d/1VUmwQ6v9CETMAIM0KplYDxt7ZocQmSNv7fZM3tVoHfw/edit?usp=sharing>
-
 # Versions
 * Java: 25
 * node: 24.21.0
