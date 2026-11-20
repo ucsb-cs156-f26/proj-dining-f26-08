@@ -94,12 +94,12 @@ public class ReviewCreationWebIT extends WebTestCase {
         .click();
 
     // Verify that the correct menu item was selected.
-    assertThat(page.locator("#review-item-name")).hasValue("Cheese Pizza");
+    assertThat(page.getByTestId("ReviewForm-itemName")).hasValue("Cheese Pizza");
 
     // Fill out the actual React review form.
-    page.locator("#review-comments").fill(COMMENTS);
-    page.locator("#review-stars").selectOption("4");
-    page.locator("#review-date").fill(DATE_SERVED);
+    page.getByTestId("ReviewForm-comments").fill(COMMENTS);
+    page.getByTestId("ReviewForm-stars").selectOption("4");
+    page.getByTestId("ReviewForm-date").fill(DATE_SERVED);
 
     // Submit through the UI, not directly through the controller.
     Response response =
