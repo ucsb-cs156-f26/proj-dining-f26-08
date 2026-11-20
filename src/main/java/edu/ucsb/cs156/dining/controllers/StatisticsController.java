@@ -78,7 +78,6 @@ public class StatisticsController extends ApiController {
         return now.minusMonths(1);
       case PERIOD_1W:
         return now.minusWeeks(1);
-      case PERIOD_ALL:
       default:
         return null;
     }

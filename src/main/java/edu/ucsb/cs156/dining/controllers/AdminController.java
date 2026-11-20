@@ -50,8 +50,8 @@ public class AdminController extends ApiController {
   @PreAuthorize("hasRole('ROLE_ADMIN')")
   @PostMapping("/post")
   public Admin postAdmin(@Parameter(name = "email") @RequestParam String email) {
-    String convertedEmail = CanonicalFormConverter.convertToValidEmail(email);
-    if (adminRepository.findByEmail(convertedEmail).isPresent()) {
+    String convertedEmail = CanonicalFormConverter.convertToValidEmail(email).strip();
+    if (adminRepository.existsByEmail(convertedEmail)) {
       throw new IllegalArgumentException("%s is already an admin".formatted(convertedEmail));
     }
     Admin admin = new Admin(convertedEmail);
@@ -87,16 +87,17 @@ public class AdminController extends ApiController {
   @PreAuthorize("hasRole('ROLE_ADMIN')")
   @DeleteMapping("/delete")
   public Object deleteAdmin(@Parameter(name = "email") @RequestParam String email) {
-    List<Admin> admins = adminRepository.findAllByEmail(email);
-    if (admins.isEmpty()) {
-      throw new EntityNotFoundException(Admin.class, email);
-    }
-    if (adminEmails.contains(email)) {
+    String convertedEmail = CanonicalFormConverter.convertToValidEmail(email).strip();
+    Admin admin =
+        adminRepository
+            .findByEmail(convertedEmail)
+            .orElseThrow(() -> new EntityNotFoundException(Admin.class, convertedEmail));
+    if (adminEmails.contains(convertedEmail)) {
       throw new UnsupportedOperationException(
           "Forbidden to delete an admin from ADMIN_EMAILS list");
     }
-    adminRepository.deleteByEmail(email);
-    return genericMessage("Admin with id %s deleted".formatted(email));
+    adminRepository.delete(admin);
+    return genericMessage("Admin with id %s deleted".formatted(convertedEmail));
   }
 
   @ExceptionHandler(IllegalArgumentException.class)

@@ -1,252 +1,216 @@
 package edu.ucsb.cs156.dining.controllers;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import edu.ucsb.cs156.dining.ControllerTestCase;
 import edu.ucsb.cs156.dining.entities.Admin;
 import edu.ucsb.cs156.dining.repositories.AdminRepository;
 import edu.ucsb.cs156.dining.repositories.UserRepository;
 import edu.ucsb.cs156.dining.testconfig.TestConfig;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MvcResult;
 
 @WebMvcTest(controllers = AdminController.class)
 @Import(TestConfig.class)
-@TestPropertySource(
-    properties =
-        "ADMIN_EMAILS=djensen@ucsb.edu,benjaminconte@ucsb.edu,samuelzhu@ucsb.edu,divyanipunj@ucsb.edu,sangitakunapuli@ucsb.edu,amey@ucsb.edu,phtcon@ucsb.edu,acdamstedt@ucsb.edu,lzhou@ucsb.edu,hannahzhang@ucsb.edu,yilei_yan@ucsb.edu,zhixiuzhu@ucsb.edu,yuchenliu735@ucsb.edu")
+@TestPropertySource(properties = "app.admin.emails=protected@ucsb.edu")
 public class AdminControllerTests extends ControllerTestCase {
 
   @MockitoBean AdminRepository adminRepository;
-
   @MockitoBean UserRepository userRepository;
 
-  // Authorization tests for post
-
   @Test
-  public void logged_out_users_cannot_post() throws Exception {
-    mockMvc.perform(post("/api/admin/post")).andExpect(status().is(403));
+  public void logged_out_users_cannot_create_list_or_delete_admins() throws Exception {
+    mockMvc
+        .perform(post("/api/admin/post").param("email", "new@ucsb.edu").with(csrf()))
+        .andExpect(status().isForbidden());
+    mockMvc.perform(get("/api/admin/all")).andExpect(status().isForbidden());
+    mockMvc
+        .perform(delete("/api/admin/delete").param("email", "new@ucsb.edu").with(csrf()))
+        .andExpect(status().isForbidden());
+    verifyNoInteractions(adminRepository);
   }
 
-  @WithMockUser(roles = {"USER"})
-  @Test
-  public void logged_in_regular_users_cannot_post() throws Exception {
-    mockMvc.perform(post("/api/admin/post")).andExpect(status().is(403)); // only admins can post
+  @ParameterizedTest
+  @ValueSource(strings = {"USER", "MODERATOR"})
+  public void non_admin_users_cannot_create_list_or_delete_admins(String role) throws Exception {
+    mockMvc
+        .perform(
+            post("/api/admin/post")
+                .param("email", "new@ucsb.edu")
+                .with(user("reviewer").roles(role))
+                .with(csrf()))
+        .andExpect(status().isForbidden());
+    mockMvc
+        .perform(get("/api/admin/all").with(user("reviewer").roles(role)))
+        .andExpect(status().isForbidden());
+    mockMvc
+        .perform(
+            delete("/api/admin/delete")
+                .param("email", "new@ucsb.edu")
+                .with(user("reviewer").roles(role))
+                .with(csrf()))
+        .andExpect(status().isForbidden());
+    verifyNoInteractions(adminRepository);
   }
 
-  // Authorization tests for get all
+  @Test
+  @WithMockUser(roles = "ADMIN")
+  public void admin_writes_require_csrf() throws Exception {
+    mockMvc
+        .perform(post("/api/admin/post").param("email", "new@ucsb.edu"))
+        .andExpect(status().isForbidden());
+    mockMvc
+        .perform(delete("/api/admin/delete").param("email", "new@ucsb.edu"))
+        .andExpect(status().isForbidden());
+    verifyNoInteractions(adminRepository);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"new@ucsb.edu", " New@ucsb.edu ", " new@umail.ucsb.edu "})
+  @WithMockUser(roles = "ADMIN")
+  public void admin_can_create_an_admin_using_a_canonical_trimmed_email(String email)
+      throws Exception {
+    Admin admin = new Admin("new@ucsb.edu");
+    when(adminRepository.save(admin)).thenReturn(admin);
+
+    mockMvc
+        .perform(post("/api/admin/post").param("email", email).with(csrf()))
+        .andExpect(status().isOk())
+        .andExpect(content().json("{\"email\":\"new@ucsb.edu\"}"));
+
+    verify(adminRepository).existsByEmail("new@ucsb.edu");
+    verify(adminRepository).save(admin);
+    verifyNoMoreInteractions(adminRepository);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"new@ucsb.edu", " New@ucsb.edu ", " new@umail.ucsb.edu "})
+  @WithMockUser(roles = "ADMIN")
+  public void duplicate_admin_emails_are_rejected_without_saving(String email) throws Exception {
+    when(adminRepository.existsByEmail("new@ucsb.edu")).thenReturn(true);
+
+    mockMvc
+        .perform(post("/api/admin/post").param("email", email).with(csrf()))
+        .andExpect(status().isBadRequest())
+        .andExpect(content().json("{\"message\":\"new@ucsb.edu is already an admin\"}"));
+
+    verify(adminRepository).existsByEmail("new@ucsb.edu");
+    verifyNoMoreInteractions(adminRepository);
+  }
 
   @Test
-  public void logged_out_users_cannot_get_all() throws Exception {
+  @WithMockUser(roles = "ADMIN")
+  public void admin_can_list_admins_and_see_which_are_protected() throws Exception {
+    when(adminRepository.findAll())
+        .thenReturn(List.of(new Admin("protected@ucsb.edu"), new Admin("other@ucsb.edu")));
+
     mockMvc
         .perform(get("/api/admin/all"))
-        .andExpect(status().is(403)); // logged out users can't get all
+        .andExpect(status().isOk())
+        .andExpect(
+            content()
+                .json(
+                    """
+            [
+              {"email":"protected@ucsb.edu","isInAdminEmails":true},
+              {"email":"other@ucsb.edu","isInAdminEmails":false}
+            ]
+            """));
+
+    verify(adminRepository).findAll();
+    verifyNoMoreInteractions(adminRepository);
   }
 
-  @WithMockUser(roles = {"USER"})
   @Test
-  public void logged_in_users_cannot_get_all() throws Exception {
-    mockMvc.perform(get("/api/admin/all")).andExpect(status().is(403)); // user roles can't get all
+  @WithMockUser(roles = "ADMIN")
+  public void admin_can_list_an_empty_admin_table() throws Exception {
+    when(adminRepository.findAll()).thenReturn(List.of());
+
+    mockMvc
+        .perform(get("/api/admin/all"))
+        .andExpect(status().isOk())
+        .andExpect(content().json("[]"));
+
+    verify(adminRepository).findAll();
   }
 
-  @WithMockUser(roles = {"ADMIN"})
-  @Test
-  public void logged_in_admin_can_get_all() throws Exception {
-    mockMvc.perform(get("/api/admin/all")).andExpect(status().is(200));
+  @ParameterizedTest
+  @ValueSource(strings = {"other@ucsb.edu", " Other@ucsb.edu ", " other@umail.ucsb.edu "})
+  @WithMockUser(roles = "ADMIN")
+  public void admin_can_delete_an_admin_by_email(String email) throws Exception {
+    Admin admin = new Admin("other@ucsb.edu");
+    when(adminRepository.findByEmail("other@ucsb.edu")).thenReturn(Optional.of(admin));
+
+    mockMvc
+        .perform(delete("/api/admin/delete").param("email", email).with(csrf()))
+        .andExpect(status().isOk())
+        .andExpect(content().json("{\"message\":\"Admin with id other@ucsb.edu deleted\"}"));
+
+    verify(adminRepository).findByEmail("other@ucsb.edu");
+    verify(adminRepository).delete(admin);
+    verifyNoMoreInteractions(adminRepository);
   }
 
-  // Authorization tests for delete
-
   @Test
-  public void logged_out_users_cannot_delete() throws Exception {
-    mockMvc.perform(delete("/api/admin?email=acdamstedt@gmail.com")).andExpect(status().is(403));
+  @WithMockUser(roles = "ADMIN")
+  public void deleting_a_missing_admin_returns_not_found_without_deleting() throws Exception {
+    when(adminRepository.findByEmail("missing@ucsb.edu")).thenReturn(Optional.empty());
+
+    mockMvc
+        .perform(delete("/api/admin/delete").param("email", "missing@ucsb.edu").with(csrf()))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.type").value("EntityNotFoundException"))
+        .andExpect(jsonPath("$.message").value("Admin with id missing@ucsb.edu not found"));
+
+    verify(adminRepository).findByEmail("missing@ucsb.edu");
+    verifyNoMoreInteractions(adminRepository);
   }
 
-  @WithMockUser(roles = {"USER"})
-  @Test
-  public void logged_in_regular_users_cannot_delete() throws Exception {
-    mockMvc.perform(delete("/api/admin?email=acdamstedt@gmail.com")).andExpect(status().is(403));
+  @ParameterizedTest
+  @ValueSource(
+      strings = {"protected@ucsb.edu", " Protected@ucsb.edu ", " protected@umail.ucsb.edu "})
+  @WithMockUser(roles = "ADMIN")
+  public void admins_in_admin_emails_cannot_be_deleted(String email) throws Exception {
+    Admin admin = new Admin("protected@ucsb.edu");
+    when(adminRepository.findByEmail("protected@ucsb.edu")).thenReturn(Optional.of(admin));
+
+    mockMvc
+        .perform(delete("/api/admin/delete").param("email", email).with(csrf()))
+        .andExpect(status().isForbidden())
+        .andExpect(
+            content()
+                .json("{\"message\":\"Forbidden to delete an admin from ADMIN_EMAILS list\"}"));
+
+    verify(adminRepository).findByEmail("protected@ucsb.edu");
+    verify(adminRepository, never()).delete(admin);
+    verifyNoMoreInteractions(adminRepository);
   }
 
-  // Functionality tests
-
-  @WithMockUser(roles = {"ADMIN"})
   @Test
-  public void an_admin_user_can_post_a_new_admin() throws Exception {
-    Admin admin = Admin.builder().email("acdamstedt@ucsb.edu").build();
-    when(adminRepository.save(eq(admin))).thenReturn(admin);
-    // act
-    MvcResult response =
-        mockMvc
-            .perform(post("/api/admin/post?email=acdamstedt@ucsb.edu").with(csrf()))
-            .andExpect(status().isOk())
-            .andReturn();
-    // assert
-    verify(adminRepository, times(1)).save(admin);
-    String expectedJson = mapper.writeValueAsString(admin);
-    String responseString = response.getResponse().getContentAsString();
-    assertEquals(expectedJson, responseString);
-  }
-
-  @WithMockUser(roles = {"ADMIN"})
-  @Test
-  public void an_admin_user_cannot_post_a_duplicate_admin() throws Exception {
-    Admin admin = Admin.builder().email("acdamstedt@ucsb.edu").build();
-    when(adminRepository.findByEmail("acdamstedt@ucsb.edu")).thenReturn(Optional.of(admin));
-
-    MvcResult response =
-        mockMvc
-            .perform(post("/api/admin/post?email=acdamstedt@ucsb.edu").with(csrf()))
-            .andExpect(status().isBadRequest())
-            .andReturn();
-
-    verify(adminRepository, times(0)).save(any());
-    Map<String, Object> json = responseToJson(response);
-    assertEquals("acdamstedt@ucsb.edu is already an admin", json.get("message"));
-  }
-
-  @WithMockUser(roles = {"ADMIN"})
-  @Test
-  public void logged_in_admin_can_get_all_admins() throws Exception {
-    List<String> adminEmails = Arrays.asList("acdamstedt@ucsb.edu");
-
-    Admin admin1 = Admin.builder().email("acdamstedt@ucsb.edu").build();
-
-    AdminController.AdminDTO adminDTO1 = new AdminController.AdminDTO(admin1, adminEmails);
-
-    Admin admin2 = Admin.builder().email("acdamstedt@csil.cs.ucsb.edu").build();
-
-    AdminController.AdminDTO adminDTO2 = new AdminController.AdminDTO(admin2, adminEmails);
-
-    ArrayList<Admin> expectedAdmins = new ArrayList<>();
-    expectedAdmins.addAll(Arrays.asList(admin1, admin2));
-
-    ArrayList<AdminController.AdminDTO> expectedAdminDTOs = new ArrayList<>();
-    expectedAdminDTOs.addAll(Arrays.asList(adminDTO1, adminDTO2));
-
-    when(adminRepository.findAll()).thenReturn(expectedAdmins);
-
-    // act
-    MvcResult response =
-        mockMvc.perform(get("/api/admin/all")).andExpect(status().isOk()).andReturn();
-
-    // assert
-    verify(adminRepository, times(1)).findAll();
-
-    String expectedJson = mapper.writeValueAsString(expectedAdminDTOs);
-    String responseString = response.getResponse().getContentAsString();
-    assertEquals(expectedJson, responseString);
-  }
-
-  @WithMockUser(roles = {"ADMIN"})
-  @Test
-  public void admin_can_delete_an_admin() throws Exception {
-    // arrange
-
-    Admin admin = Admin.builder().email("acdamstedt@gmail.com").build();
-
-    when(adminRepository.findAllByEmail("acdamstedt@gmail.com")).thenReturn(List.of(admin));
-
-    // act
-    MvcResult response =
-        mockMvc
-            .perform(delete("/api/admin/delete?email=acdamstedt@gmail.com").with(csrf()))
-            .andExpect(status().isOk())
-            .andReturn();
-
-    // assert
-    verify(adminRepository, times(1)).findAllByEmail("acdamstedt@gmail.com");
-    verify(adminRepository, times(1)).deleteByEmail("acdamstedt@gmail.com");
-
-    Map<String, Object> json = responseToJson(response);
-    assertEquals("Admin with id acdamstedt@gmail.com deleted", json.get("message"));
-  }
-
-  @WithMockUser(roles = {"ADMIN"})
-  @Test
-  public void admin_tries_to_delete_non_existant_admin_and_gets_right_error_message()
-      throws Exception {
-    // arrange
-
-    when(adminRepository.findAllByEmail("acdamstedt@gmail.com")).thenReturn(List.of());
-
-    // act
-    MvcResult response =
-        mockMvc
-            .perform(delete("/api/admin/delete?email=acdamstedt@gmail.com").with(csrf()))
-            .andExpect(status().isNotFound())
-            .andReturn();
-
-    // assert
-    verify(adminRepository, times(1)).findAllByEmail("acdamstedt@gmail.com");
-    Map<String, Object> json = responseToJson(response);
-    assertEquals("Admin with id acdamstedt@gmail.com not found", json.get("message"));
-  }
-
-  @WithMockUser(roles = {"ADMIN"})
-  @Test
-  public void admin_can_delete_duplicate_admin_emails() throws Exception {
-    // arrange
-
-    Admin admin1 = Admin.builder().email("testadmin@ucsb.edu").build();
-    Admin admin2 = Admin.builder().email("testadmin@ucsb.edu").build();
-
-    when(adminRepository.findAllByEmail("testadmin@ucsb.edu")).thenReturn(List.of(admin1, admin2));
-
-    // act
-    MvcResult response =
-        mockMvc
-            .perform(delete("/api/admin/delete?email=testadmin@ucsb.edu").with(csrf()))
-            .andExpect(status().isOk())
-            .andReturn();
-
-    // assert
-    verify(adminRepository, times(1)).findAllByEmail("testadmin@ucsb.edu");
-    verify(adminRepository, times(1)).deleteByEmail("testadmin@ucsb.edu");
-
-    Map<String, Object> json = responseToJson(response);
-    assertEquals("Admin with id testadmin@ucsb.edu deleted", json.get("message"));
-  }
-
-  @WithMockUser(roles = {"ADMIN"})
-  @Test
-  public void admin_tries_to_delete_an_ADMIN_EMAIL_and_gets_right_error_message() throws Exception {
-
-    Admin admin = Admin.builder().email("acdamstedt@ucsb.edu").build();
-
-    when(adminRepository.findAllByEmail("acdamstedt@ucsb.edu")).thenReturn(List.of(admin));
-
-    // act
-    MvcResult response =
-        mockMvc
-            .perform(delete("/api/admin/delete?email=acdamstedt@ucsb.edu").with(csrf()))
-            .andExpect(status().is(403))
-            .andReturn();
-
-    String content = response.getResponse().getContentAsString();
-    System.out.println("Response content: " + content);
-
-    // assert
-    verify(adminRepository, times(1)).findAllByEmail("acdamstedt@ucsb.edu");
-    Map<String, Object> json = responseToJson(response);
-    assertEquals("Forbidden to delete an admin from ADMIN_EMAILS list", json.get("message"));
+  @WithMockUser(roles = "ADMIN")
+  public void email_is_required_for_create_and_delete() throws Exception {
+    mockMvc.perform(post("/api/admin/post").with(csrf())).andExpect(status().isBadRequest());
+    mockMvc.perform(delete("/api/admin/delete").with(csrf())).andExpect(status().isBadRequest());
+    verifyNoInteractions(adminRepository);
   }
 }

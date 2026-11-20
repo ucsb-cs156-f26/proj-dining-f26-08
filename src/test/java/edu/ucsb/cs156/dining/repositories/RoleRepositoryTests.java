@@ -7,14 +7,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import edu.ucsb.cs156.dining.entities.Admin;
 import edu.ucsb.cs156.dining.entities.Moderator;
 import edu.ucsb.cs156.dining.services.wiremock.WiremockService;
-import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 
 @DataJpaTest
 public class RoleRepositoryTests {
@@ -62,9 +59,10 @@ public class RoleRepositoryTests {
     adminRepository.save(new Admin("duplicate-admin@example.org"));
     adminRepository.save(new Admin("duplicate-admin@example.org"));
 
+    assertEquals(1, adminRepository.count());
     assertEquals(
-        List.of(new Admin("duplicate-admin@example.org")),
-        adminRepository.findAllByEmail("duplicate-admin@example.org"));
+        Optional.of(new Admin("duplicate-admin@example.org")),
+        adminRepository.findByEmail("duplicate-admin@example.org"));
   }
 
   @Test
@@ -72,9 +70,10 @@ public class RoleRepositoryTests {
     moderatorRepository.save(new Moderator("duplicate-moderator@example.org"));
     moderatorRepository.save(new Moderator("duplicate-moderator@example.org"));
 
+    assertEquals(1, moderatorRepository.count());
     assertEquals(
-        List.of(new Moderator("duplicate-moderator@example.org")),
-        moderatorRepository.findAllByEmail("duplicate-moderator@example.org"));
+        Optional.of(new Moderator("duplicate-moderator@example.org")),
+        moderatorRepository.findByEmail("duplicate-moderator@example.org"));
   }
 
   @Test
@@ -90,31 +89,24 @@ public class RoleRepositoryTests {
   }
 
   @Test
-  @Transactional(propagation = Propagation.NOT_SUPPORTED)
-  public void deleteByEmail_deletes_admin() {
-    adminRepository.save(new Admin("admin@example.org"));
+  public void delete_removes_only_the_matching_admin() {
+    Admin admin = adminRepository.save(new Admin("admin@example.org"));
+    adminRepository.save(new Admin("other-admin@example.org"));
 
-    long deleted = adminRepository.deleteByEmail("admin@example.org");
+    adminRepository.delete(admin);
 
-    assertEquals(1, deleted);
     assertFalse(adminRepository.existsByEmail("admin@example.org"));
+    assertTrue(adminRepository.existsByEmail("other-admin@example.org"));
   }
 
   @Test
-  @Transactional(propagation = Propagation.NOT_SUPPORTED)
-  public void deleteByEmail_returns_zero_for_missing_roles() {
-    assertEquals(0, adminRepository.deleteByEmail("missing@example.org"));
-    assertEquals(0, moderatorRepository.deleteByEmail("missing@example.org"));
-  }
+  public void delete_removes_only_the_matching_moderator() {
+    Moderator moderator = moderatorRepository.save(new Moderator("moderator@example.org"));
+    moderatorRepository.save(new Moderator("other-moderator@example.org"));
 
-  @Test
-  @Transactional(propagation = Propagation.NOT_SUPPORTED)
-  public void deleteByEmail_deletes_moderator() {
-    moderatorRepository.save(new Moderator("moderator@example.org"));
+    moderatorRepository.delete(moderator);
 
-    long deleted = moderatorRepository.deleteByEmail("moderator@example.org");
-
-    assertEquals(1, deleted);
     assertFalse(moderatorRepository.existsByEmail("moderator@example.org"));
+    assertTrue(moderatorRepository.existsByEmail("other-moderator@example.org"));
   }
 }

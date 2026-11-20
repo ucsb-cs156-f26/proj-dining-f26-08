@@ -7,7 +7,6 @@ import edu.ucsb.cs156.dining.utilities.CanonicalFormConverter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,8 +38,8 @@ public class ModeratorController extends ApiController {
   @PreAuthorize("hasRole('ROLE_ADMIN')")
   @PostMapping("/post")
   public Moderator postModerator(@Parameter(name = "email") @RequestParam String email) {
-    String convertedEmail = CanonicalFormConverter.convertToValidEmail(email);
-    if (moderatorRepository.findByEmail(convertedEmail).isPresent()) {
+    String convertedEmail = CanonicalFormConverter.convertToValidEmail(email).strip();
+    if (moderatorRepository.existsByEmail(convertedEmail)) {
       throw new IllegalArgumentException("%s is already a moderator".formatted(convertedEmail));
     }
     Moderator moderator = new Moderator(convertedEmail);
@@ -70,12 +69,13 @@ public class ModeratorController extends ApiController {
   @PreAuthorize("hasRole('ROLE_ADMIN')")
   @DeleteMapping("/delete")
   public Object deleteModerator(@Parameter(name = "email") @RequestParam String email) {
-    List<Moderator> moderators = moderatorRepository.findAllByEmail(email);
-    if (moderators.isEmpty()) {
-      throw new EntityNotFoundException(Moderator.class, email);
-    }
-    moderatorRepository.deleteByEmail(email);
-    return genericMessage("Moderator with id %s deleted".formatted(email));
+    String convertedEmail = CanonicalFormConverter.convertToValidEmail(email).strip();
+    Moderator moderator =
+        moderatorRepository
+            .findByEmail(convertedEmail)
+            .orElseThrow(() -> new EntityNotFoundException(Moderator.class, convertedEmail));
+    moderatorRepository.delete(moderator);
+    return genericMessage("Moderator with id %s deleted".formatted(convertedEmail));
   }
 
   @ExceptionHandler(IllegalArgumentException.class)
