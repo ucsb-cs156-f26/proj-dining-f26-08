@@ -229,7 +229,21 @@
 <a name='L164'></a><a href='#L164'>164</a>
 <a name='L165'></a><a href='#L165'>165</a>
 <a name='L166'></a><a href='#L166'>166</a>
-<a name='L167'></a><a href='#L167'>167</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L167'></a><a href='#L167'>167</a>
+<a name='L168'></a><a href='#L168'>168</a>
+<a name='L169'></a><a href='#L169'>169</a>
+<a name='L170'></a><a href='#L170'>170</a>
+<a name='L171'></a><a href='#L171'>171</a>
+<a name='L172'></a><a href='#L172'>172</a>
+<a name='L173'></a><a href='#L173'>173</a>
+<a name='L174'></a><a href='#L174'>174</a>
+<a name='L175'></a><a href='#L175'>175</a>
+<a name='L176'></a><a href='#L176'>176</a>
+<a name='L177'></a><a href='#L177'>177</a>
+<a name='L178'></a><a href='#L178'>178</a>
+<a name='L179'></a><a href='#L179'>179</a>
+<a name='L180'></a><a href='#L180'>180</a>
+<a name='L181'></a><a href='#L181'>181</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -240,9 +254,23 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">401x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">401x</span>
+<span class="cline-any cline-yes">404x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">404x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -399,6 +427,7 @@
 import { Link } from "react-router";
 import { hasRole } from "main/utils/currentUser";
 import AppNavbarLocalhost from "main/components/Nav/AppNavbarLocalhost";
+import MenuItemSearchContainer from "main/components/Nav/MenuItemSearchContainer";
 &nbsp;
 export default function AppNavbar({
   currentUser,
@@ -488,6 +517,7 @@ export default function AppNavbar({
                   &lt;Nav.Link as={Link} to="/myreviews"&gt;
                     My Reviews
                   &lt;/Nav.Link&gt;
+&nbsp;
                   &lt;NavDropdown
                     title="Statistics"
                     id="appnavbar-statistics-dropdown"
@@ -500,6 +530,7 @@ export default function AppNavbar({
                     &gt;
                       Overview
                     &lt;/NavDropdown.Item&gt;
+&nbsp;
                     &lt;NavDropdown.Item
                       as={Link}
                       to="/statistics/items/best"
@@ -507,6 +538,7 @@ export default function AppNavbar({
                     &gt;
                       Best Rated Items
                     &lt;/NavDropdown.Item&gt;
+&nbsp;
                     &lt;NavDropdown.Item
                       as={Link}
                       to="/statistics/items/worst"
@@ -514,6 +546,7 @@ export default function AppNavbar({
                     &gt;
                       Worst Rated Items
                     &lt;/NavDropdown.Item&gt;
+&nbsp;
                     &lt;NavDropdown.Item
                       as={Link}
                       to="/statistics/commons/averages"
@@ -521,6 +554,7 @@ export default function AppNavbar({
                     &gt;
                       Commons Averages
                     &lt;/NavDropdown.Item&gt;
+&nbsp;
                     &lt;NavDropdown.Item
                       as={Link}
                       to="/statistics/commons/overtime"
@@ -528,6 +562,7 @@ export default function AppNavbar({
                     &gt;
                       Commons Over Time
                     &lt;/NavDropdown.Item&gt;
+&nbsp;
                     &lt;NavDropdown.Item
                       as={Link}
                       to="/statistics/commons/meals"
@@ -541,6 +576,13 @@ export default function AppNavbar({
                 &lt;&gt;&lt;/&gt;
               )}
             &lt;/Nav&gt;
+&nbsp;
+            &lt;div
+              className="mx-xl-3 my-2 my-xl-0 flex-grow-1"
+              style={{ maxWidth: 340, minWidth: 0 }}
+            &gt;
+              &lt;MenuItemSearchContainer /&gt;
+            &lt;/div&gt;
 &nbsp;
             &lt;Nav className="ml-auto"&gt;
               {currentUser &amp;&amp; currentUser.loggedIn ? (
@@ -568,7 +610,7 @@ export default function AppNavbar({
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-11-17T20:15:13.787Z
+                at 2026-11-21T01:58:31.376Z
             </div>
         <script src="../../prettify.js"></script>
         <script>
