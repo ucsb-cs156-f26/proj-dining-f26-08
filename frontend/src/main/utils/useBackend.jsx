@@ -41,6 +41,7 @@ export function useBackend(queryKey, axiosParameters, initialData) {
     },
     {
       initialData:
+        // Stryker disable next-line ConditionalExpression : passing initialData: undefined is equivalent to omitting it in react-query
         initialData !== undefined
           ? { data: initialData, status: 200 }
           : undefined,
@@ -78,13 +79,21 @@ export function useBackendMutation(
 ) {
   const queryClient = useQueryClient();
 
-  return useMutation((object) => wrappedParams(objectToAxiosParams(object)), {
+  return useMutation({
+    mutationFn: (object) => wrappedParams(objectToAxiosParams(object)),
     onError: (data) => {
       toast(`${data}`);
     },
     // Stryker disable all: Not sure how to set up the complex behavior needed to test this
     onSettled: () => {
-      if (queryKey !== null) queryClient.invalidateQueries(queryKey);
+      if (queryKey !== null) {
+        // Handle array of query keys for cache invalidation
+        if (Array.isArray(queryKey)) {
+          queryKey.forEach((key) => {
+            queryClient.invalidateQueries({ queryKey: [key] });
+          });
+        }
+      }
     },
     // Stryker restore all
     retry: false,
