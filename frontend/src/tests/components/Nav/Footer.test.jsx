@@ -7,6 +7,13 @@ describe("Footer tests", () => {
     expect(space).toBe(" ");
   });
 
+  test("Footer text", () => {
+    render(<Footer />);
+    expect(
+      screen.getByText("This app is a class project of CMPSC 156 at UCSB. Check out the source code on GitHub! This is not an official source of UCSB dining commons information. An official source can be found here."),
+    ).toBeInTheDocument();
+  });
+
   test("Links are correct", () => {
     render(<Footer />);
     expect(screen.getByTestId("footer-class-website-link")).toHaveAttribute(
