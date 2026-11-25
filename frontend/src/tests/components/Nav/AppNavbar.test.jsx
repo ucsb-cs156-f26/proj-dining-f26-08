@@ -69,6 +69,23 @@ describe("AppNavbar tests", () => {
     ).not.toBeInTheDocument();
   });
 
+  test("search container has the expected width styles", async () => {
+    const currentUser = currentUserFixtures.notLoggedIn;
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <AppNavbar currentUser={currentUser} />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    const searchContainer = await screen.findByTestId(
+      "AppNavbar-search-container",
+    );
+    expect(searchContainer).toHaveStyle("max-width: 340px; min-width: 0");
+  });
+
   test("renders correctly for admin user", async () => {
     const currentUser = currentUserFixtures.adminUser;
     const doLogin = vi.fn();

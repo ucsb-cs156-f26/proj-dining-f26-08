@@ -155,6 +155,7 @@ export default function AppNavbar({
             <div
               className="mx-xl-3 my-2 my-xl-0 flex-grow-1"
               style={{ maxWidth: 340, minWidth: 0 }}
+              data-testid="AppNavbar-search-container"
             >
               <MenuItemSearchContainer />
             </div>
