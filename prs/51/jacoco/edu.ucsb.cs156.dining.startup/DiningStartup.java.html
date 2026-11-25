@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DiningStartup.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">proj-dining</a> &gt; <a href="index.source.html" class="el_package">edu.ucsb.cs156.dining.startup</a> &gt; <span class="el_source">DiningStartup.java</span></div><h1>DiningStartup.java</h1><pre class="source lang-java linenums">package edu.ucsb.cs156.dining.startup;
+
+import edu.ucsb.cs156.dining.entities.Admin;
+import edu.ucsb.cs156.dining.jobs.LoadMonthMenuItemsJob;
+import edu.ucsb.cs156.dining.repositories.AdminRepository;
+import edu.ucsb.cs156.dining.services.DiningCommonsService;
+import edu.ucsb.cs156.dining.services.UCSBDiningMenuItemsService;
+import edu.ucsb.cs156.dining.services.UCSBDiningMenuService;
+import edu.ucsb.cs156.jobs.services.JobService;
+import java.time.YearMonth;
+import java.util.List;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Component;
+
+/** This class contains a method that is called once at application startup time. */
+<span class="fc" id="L20">@Slf4j</span>
+@Component
+<span class="fc" id="L22">public class DiningStartup {</span>
+
+  @Value(&quot;#{'${app.admin.emails}'.split(',')}&quot;)
+  List&lt;String&gt; adminEmails;
+
+  @Value(&quot;${app.ucsb.api.consumer_key}&quot;)
+  String apiKey;
+
+  @Value(&quot;${app.startup.loadMonthMenuItems:true}&quot;)
+  boolean loadMonthMenuItems;
+
+  @Autowired AdminRepository adminRepository;
+  @Autowired JobService jobService;
+  @Autowired DiningCommonsService diningCommonsService;
+  @Autowired UCSBDiningMenuService menuService;
+  @Autowired UCSBDiningMenuItemsService menuItemsService;
+
+  /**
+   * Called once at application startup time. Loads all emails in ADMIN_EMAILS into the Admin table,
+   * then starts a background job that downloads the current month's menu items.
+   */
+  @EventListener(ApplicationReadyEvent.class)
+  public void alwaysRunOnStartup() {
+<span class="fc" id="L45">    log.info(&quot;alwaysRunOnStartup called&quot;);</span>
+
+<span class="fc" id="L47">    adminEmails.forEach(</span>
+        (email) -&gt; {
+          try {
+<span class="fc bfc" id="L50" title="All 2 branches covered.">            if (!adminRepository.existsByEmail(email)) {</span>
+<span class="fc" id="L51">              Admin admin = new Admin(email);</span>
+<span class="fc" id="L52">              adminRepository.save(admin);</span>
+            }
+<span class="fc" id="L54">          } catch (Exception e) {</span>
+<span class="fc" id="L55">            log.error(&quot;Error saving admin email {}: {}&quot;, email, e.getMessage());</span>
+<span class="fc" id="L56">          }</span>
+<span class="fc" id="L57">        });</span>
+<span class="fc bfc" id="L58" title="All 2 branches covered.">    if (loadMonthMenuItems) {</span>
+      try {
+<span class="fc" id="L60">        jobService.runAsJob(</span>
+<span class="fc" id="L61">            LoadMonthMenuItemsJob.builder()</span>
+<span class="fc" id="L62">                .diningCommonsService(diningCommonsService)</span>
+<span class="fc" id="L63">                .menuService(menuService)</span>
+<span class="fc" id="L64">                .menuItemsService(menuItemsService)</span>
+<span class="fc" id="L65">                .apiKey(apiKey)</span>
+<span class="fc" id="L66">                .month(YearMonth.now())</span>
+<span class="fc" id="L67">                .sleeper(Thread::sleep)</span>
+<span class="fc" id="L68">                .build());</span>
+<span class="fc" id="L69">      } catch (Exception e) {</span>
+<span class="fc" id="L70">        log.error(&quot;Failed to start menu item download job: {}&quot;, e.getMessage());</span>
+<span class="fc" id="L71">      }</span>
+    } else {
+<span class="fc" id="L73">      log.info(&quot;Skipping menu item download job (app.startup.loadMonthMenuItems=false)&quot;);</span>
+    }
+<span class="fc" id="L75">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
