@@ -27,7 +27,7 @@ vi.mock("react-router", async () => {
     ...originalModule,
     useParams: () => ({
       "date-time": "2025-03-11",
-      "dining-commons-code": "carrillo",
+      "dining-commons-code": "de-la-guerra",
       meal: "breakfast",
     }),
   };
@@ -57,7 +57,7 @@ describe("MenuItemPage", () => {
 
   test("MenuItemPage works with no backend", async () => {
     axiosMock
-      .onGet("/api/diningcommons/2025-03-11/carrillo/breakfast")
+      .onGet("/api/diningcommons/2025-03-11/de-la-guerra/breakfast")
       .timeout();
 
     render(
@@ -72,15 +72,16 @@ describe("MenuItemPage", () => {
       expect(axiosMock.history.get.length).toBe(3);
     });
 
-    expect(screen.getByText("Breakfast")).toBeInTheDocument();
+    expect(screen.getByText("Breakfast at De La Guerra")).toBeInTheDocument();
     expect(
       screen.queryByText("MenuItemTable-cell-header-col-name"),
     ).not.toBeInTheDocument();
+    screen.debug();
   });
 
   test("MenuItemPage renders 5 Menu Items Correctly", async () => {
     axiosMock
-      .onGet("/api/diningcommons/2025-03-11/carrillo/breakfast")
+      .onGet("/api/diningcommons/2025-03-11/de-la-guerra/breakfast")
       .reply(200, menuItemFixtures.fiveMenuItems);
 
     render(
