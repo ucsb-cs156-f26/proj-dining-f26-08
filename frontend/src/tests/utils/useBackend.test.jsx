@@ -16,6 +16,31 @@ vi.mock("react-toastify", async (importOriginal) => {
   };
 });
 
+// Helpers used by the cache-invalidation tests
+const createWrapper = () => {
+  // See: https://react-query.tanstack.com/guides/testing#turn-off-retries
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+  const wrapper = ({ children }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+  return { queryClient, wrapper };
+};
+
+const deleteReviewParams = (id) => ({
+  url: "/api/reviews/delete",
+  method: "DELETE",
+  params: { id },
+});
+
+const isInvalidated = (queryClient, key) =>
+  queryClient.getQueryState(key).isInvalidated;
+
 describe("utils/useBackend tests", () => {
   let axiosMock;
 
@@ -107,6 +132,71 @@ describe("utils/useBackend tests", () => {
       expect(errorMessage).toMatch(
         "Error communicating with backend via GET on /api/admin/users",
       );
+    });
+
+    test("useBackend with no initialData starts out loading, with no data and no status", async () => {
+      const { wrapper } = createWrapper();
+      axiosMock = new AxiosMockAdapter(axios);
+      axiosMock.onGet("/api/things").reply(200, ["from server"]);
+
+      const { result } = renderHook(
+        () =>
+          useBackend(["/api/things"], { method: "GET", url: "/api/things" }),
+        { wrapper },
+      );
+
+      // Synchronously after the first render, before the request resolves.
+      // If useBackend always built an initialData object, status would already
+      // be 200 and isLoading would be false.
+      expect(result.current.data).toBeUndefined();
+      expect(result.current.status).toBeUndefined();
+      expect(result.current.isLoading).toBe(true);
+
+      await waitFor(() => expect(result.current.data).toEqual(["from server"]));
+      expect(result.current.status).toBe(200);
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    test("useBackend with no initialData leaves data and status undefined after a failed request", async () => {
+      const { wrapper } = createWrapper();
+      axiosMock = new AxiosMockAdapter(axios);
+      axiosMock.onGet("/api/things").reply(500);
+
+      const { result } = renderHook(
+        () =>
+          useBackend(["/api/things"], { method: "GET", url: "/api/things" }),
+        { wrapper },
+      );
+
+      await waitFor(() => expect(result.current.isError).toBe(true));
+      expect(result.current.data).toBeUndefined();
+      expect(result.current.status).toBeUndefined();
+      expect(mockToast).toHaveBeenCalledWith(
+        "Error communicating with backend via GET on /api/things",
+      );
+    });
+
+    test("useBackend with initialData starts out with that data and status 200", async () => {
+      const { wrapper } = createWrapper();
+      axiosMock = new AxiosMockAdapter(axios);
+      axiosMock.onGet("/api/things").reply(200, ["from server"]);
+
+      const { result } = renderHook(
+        () =>
+          useBackend(
+            ["/api/things"],
+            { method: "GET", url: "/api/things" },
+            [],
+          ),
+        { wrapper },
+      );
+
+      // Synchronously after the first render, before the request resolves
+      expect(result.current.data).toEqual([]);
+      expect(result.current.status).toBe(200);
+      expect(result.current.isLoading).toBe(false);
+
+      await waitFor(() => expect(result.current.data).toEqual(["from server"]));
     });
   });
 
@@ -293,6 +383,253 @@ describe("utils/useBackend tests", () => {
       );
       const errorMessage2 = console.error.mock.calls[2][0];
       expect(errorMessage2).toMatch(/onError from mutation.mutate called!/);
+    });
+
+    describe("cache invalidation", () => {
+      test("useBackendMutation invalidates the cache after success", async () => {
+        const { queryClient, wrapper } = createWrapper();
+        axiosMock = new AxiosMockAdapter(axios);
+
+        queryClient.setQueryData(["/api/recommendationrequest/all"], []);
+        axiosMock.onPost("/api/recommendationrequest/post").reply(202, {});
+
+        const { result } = renderHook(
+          () =>
+            useBackendMutation(
+              () => ({
+                url: "/api/recommendationrequest/post",
+                method: "POST",
+              }),
+              {},
+              ["/api/recommendationrequest/all"],
+            ),
+          { wrapper },
+        );
+
+        act(() => result.current.mutate({}));
+
+        await waitFor(() =>
+          expect(
+            isInvalidated(queryClient, ["/api/recommendationrequest/all"]),
+          ).toBe(true),
+        );
+      });
+
+      test("invalidates every key in an array of keys, and only those keys", async () => {
+        const { queryClient, wrapper } = createWrapper();
+        axiosMock = new AxiosMockAdapter(axios);
+
+        queryClient.setQueryData(["/api/reviews/userReviews"], []);
+        queryClient.setQueryData(["/api/reviews/needsmoderation"], []);
+        queryClient.setQueryData(["/api/reviews/unrelated"], []);
+
+        axiosMock
+          .onDelete("/api/reviews/delete")
+          .reply(200, { message: "deleted" });
+
+        const { result } = renderHook(
+          () =>
+            useBackendMutation(deleteReviewParams, {}, [
+              "/api/reviews/userReviews",
+              "/api/reviews/needsmoderation",
+            ]),
+          { wrapper },
+        );
+
+        act(() => result.current.mutate(7));
+
+        await waitFor(() =>
+          expect(isInvalidated(queryClient, ["/api/reviews/userReviews"])).toBe(
+            true,
+          ),
+        );
+        expect(
+          isInvalidated(queryClient, ["/api/reviews/needsmoderation"]),
+        ).toBe(true);
+        // a key that was not passed must be left alone
+        expect(isInvalidated(queryClient, ["/api/reviews/unrelated"])).toBe(
+          false,
+        );
+      });
+
+      test("treats a multi-element key array as separate keys, not one combined key", async () => {
+        // Regression for the MyReviews page: invalidating the combined key
+        // ["/api/reviews/userReviews", "/api/reviews/needsmoderation"] would NOT
+        // match the query cached under ["/api/reviews/userReviews"].
+        const { queryClient, wrapper } = createWrapper();
+        axiosMock = new AxiosMockAdapter(axios);
+
+        queryClient.setQueryData(["/api/reviews/userReviews"], []);
+        axiosMock.onDelete("/api/reviews/delete").reply(200, {});
+
+        const { result } = renderHook(
+          () =>
+            useBackendMutation(deleteReviewParams, {}, [
+              "/api/reviews/userReviews",
+              "/api/reviews/needsmoderation",
+            ]),
+          { wrapper },
+        );
+
+        act(() => result.current.mutate(7));
+
+        await waitFor(() =>
+          expect(isInvalidated(queryClient, ["/api/reviews/userReviews"])).toBe(
+            true,
+          ),
+        );
+      });
+
+      test("invalidates keys even when the mutation fails", async () => {
+        const { queryClient, wrapper } = createWrapper();
+        axiosMock = new AxiosMockAdapter(axios);
+
+        queryClient.setQueryData(["/api/reviews/userReviews"], []);
+        queryClient.setQueryData(["/api/reviews/needsmoderation"], []);
+
+        axiosMock.onDelete("/api/reviews/delete").reply(404);
+
+        const { result } = renderHook(
+          () =>
+            useBackendMutation(deleteReviewParams, {}, [
+              "/api/reviews/userReviews",
+              "/api/reviews/needsmoderation",
+            ]),
+          { wrapper },
+        );
+
+        act(() => result.current.mutate(7));
+
+        await waitFor(() => expect(mockToast).toHaveBeenCalled());
+        expect(mockToast).toHaveBeenCalledWith(
+          "Error: Request failed with status code 404",
+        );
+        await waitFor(() =>
+          expect(isInvalidated(queryClient, ["/api/reviews/userReviews"])).toBe(
+            true,
+          ),
+        );
+        expect(
+          isInvalidated(queryClient, ["/api/reviews/needsmoderation"]),
+        ).toBe(true);
+      });
+
+      test("still invalidates when a caller-supplied onSuccess is passed", async () => {
+        const { queryClient, wrapper } = createWrapper();
+        axiosMock = new AxiosMockAdapter(axios);
+
+        queryClient.setQueryData(["/api/reviews/userReviews"], []);
+        axiosMock.onDelete("/api/reviews/delete").reply(200, {});
+
+        const onSuccess = vi.fn();
+        const { result } = renderHook(
+          () =>
+            useBackendMutation(deleteReviewParams, { onSuccess }, [
+              "/api/reviews/userReviews",
+            ]),
+          { wrapper },
+        );
+
+        act(() => result.current.mutate(7));
+
+        await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+        await waitFor(() =>
+          expect(isInvalidated(queryClient, ["/api/reviews/userReviews"])).toBe(
+            true,
+          ),
+        );
+      });
+
+      test("does not invalidate anything when the key is null", async () => {
+        const { queryClient, wrapper } = createWrapper();
+        axiosMock = new AxiosMockAdapter(axios);
+
+        queryClient.setQueryData(["/api/reviews/userReviews"], []);
+        axiosMock.onDelete("/api/reviews/delete").reply(200, {});
+
+        const onSuccess = vi.fn();
+        const { result } = renderHook(
+          () => useBackendMutation(deleteReviewParams, { onSuccess }),
+          { wrapper },
+        );
+
+        act(() => result.current.mutate(7));
+
+        await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+        await waitFor(() => expect(result.current.isSuccess).toBe(true));
+        expect(isInvalidated(queryClient, ["/api/reviews/userReviews"])).toBe(
+          false,
+        );
+      });
+
+      test("silently ignores a non-array (string) key", async () => {
+        const { queryClient, wrapper } = createWrapper();
+        axiosMock = new AxiosMockAdapter(axios);
+
+        queryClient.setQueryData(["/api/reviews/userReviews"], []);
+        axiosMock.onDelete("/api/reviews/delete").reply(200, {});
+
+        const onSuccess = vi.fn();
+        const { result } = renderHook(
+          () =>
+            useBackendMutation(
+              deleteReviewParams,
+              { onSuccess },
+              "/api/reviews/userReviews",
+            ),
+          { wrapper },
+        );
+
+        act(() => result.current.mutate(7));
+
+        await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+        await waitFor(() => expect(result.current.isSuccess).toBe(true));
+        expect(isInvalidated(queryClient, ["/api/reviews/userReviews"])).toBe(
+          false,
+        );
+      });
+
+      test("an active useBackend query refetches after the mutation (table updates)", async () => {
+        const { wrapper } = createWrapper();
+        axiosMock = new AxiosMockAdapter(axios);
+
+        const review = { id: 1, itemName: "Pancakes", reviewerComments: "ok" };
+
+        // First GET returns the review, the GET after the delete returns nothing
+        axiosMock
+          .onGet("/api/reviews/userReviews")
+          .replyOnce(200, [review])
+          .onGet("/api/reviews/userReviews")
+          .replyOnce(200, []);
+        axiosMock.onDelete("/api/reviews/delete").reply(200, {});
+
+        const { result } = renderHook(
+          () => ({
+            reviews: useBackend(
+              ["/api/reviews/userReviews"],
+              { method: "GET", url: "/api/reviews/userReviews" },
+              [],
+            ),
+            deletion: useBackendMutation(deleteReviewParams, {}, [
+              "/api/reviews/userReviews",
+              "/api/reviews/needsmoderation",
+            ]),
+          }),
+          { wrapper },
+        );
+
+        await waitFor(() =>
+          expect(result.current.reviews.data).toEqual([review]),
+        );
+
+        act(() => result.current.deletion.mutate(1));
+
+        // The delete invalidates the table's key, so the table re-fetches and
+        // the deleted review disappears without a page refresh.
+        await waitFor(() => expect(result.current.reviews.data).toEqual([]));
+        expect(axiosMock.history.get.length).toBe(2);
+        expect(axiosMock.history.delete.length).toBe(1);
+      });
     });
   });
 });
