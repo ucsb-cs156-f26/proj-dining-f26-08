@@ -1,6 +1,6 @@
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { BrowserRouter } from "react-router";
+import { MemoryRouter, Routes, Route, BrowserRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "react-query";
 import { ToastContainer } from "react-toastify";
 import PostReviewPage from "main/pages/Reviews/PostReviewPage";
@@ -62,6 +62,55 @@ describe("MyReviewsCreatePage - full coverage tests", () => {
       name: /submit review/i,
     });
     expect(button).toBeEnabled();
+  });
+
+  test("title contains itemname and dininghall", async () => {
+    axiosMock.onGet("/api/diningcommons/menuitem?id=72").reply(200, {
+      name: "Long Grain Rice (vgn)",
+      diningCommonsCode: "de-la-guerra",
+    });
+    axiosMock.onPost("/api/reviews/post").reply(200, {});
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={["/reviews/post/72"]}>
+          <Routes>
+            <Route path="/reviews/post/:id" element={<PostReviewPage />} />
+          </Routes>
+          <ToastContainer />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", {
+          name: "Post a review for Long Grain Rice (vgn) at De La Guerra",
+        }),
+      ).toBeInTheDocument();
+    });
+  });
+
+  test("heading if GET single menu item by ID returns empty", async () => {
+    axiosMock.onGet("/api/diningcommons/menuitem?id=72").reply(200, {});
+    axiosMock.onPost("/api/reviews/post").reply(200, {});
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={["/reviews/post/72"]}>
+          <Routes>
+            <Route path="/reviews/post/:id" element={<PostReviewPage />} />
+          </Routes>
+          <ToastContainer />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", {
+          name: "Post a review for at",
+        }),
+      ).toBeInTheDocument();
+    });
   });
 
   test("submits form and navigates on successful post", async () => {
