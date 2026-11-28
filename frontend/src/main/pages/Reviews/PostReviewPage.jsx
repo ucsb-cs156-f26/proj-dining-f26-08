@@ -6,6 +6,10 @@ import { toast } from "react-toastify";
 import ReviewForm from "main/components/MyReviews/ReviewForm";
 import { useBackend } from "main/utils/useBackend";
 
+function capitalizeString(str) {
+  return str.replace(/-/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
 export default function PostReviewPage() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -24,7 +28,10 @@ export default function PostReviewPage() {
     [],
   );
 
-  const itemName = menuItems.name;
+  const itemName = menuItems.name ?? "";
+  const diningHall = menuItems.diningCommonsCode
+    ? capitalizeString(menuItems.diningCommonsCode)
+    : "";
 
   const submitReview = async (formData) => {
     try {
@@ -49,7 +56,9 @@ export default function PostReviewPage() {
   return (
     <BasicLayout>
       <div className="pt-2">
-        <h1>Post a review for Menu Item {id}</h1>
+        <h1>
+          Post a review for {itemName} at {diningHall}
+        </h1>
         <ReviewForm initialItemName={itemName} submitAction={submitReview} />
       </div>
     </BasicLayout>
