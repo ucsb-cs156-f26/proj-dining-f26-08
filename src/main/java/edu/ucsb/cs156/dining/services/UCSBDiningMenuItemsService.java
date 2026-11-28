@@ -114,22 +114,25 @@ public class UCSBDiningMenuItemsService {
         existingItems.stream()
             .collect(
                 Collectors.toMap(
-                    (item) -> item.getStation() + ":" + item.getName(), Function.identity()));
+                    (item) -> item.getStation() + ":" + item.getName(),
+                    Function.identity(),
+                    (first, second) -> first)); // tolerate duplicate rows already in the DB
 
     for (Entree selected : entrees) {
-      if (existingItemsMap.containsKey(selected.getStation() + ":" + selected.getName())) {
+      String key = selected.getStation() + ":" + selected.getName();
+      if (existingItemsMap.containsKey(key)) {
         continue;
-      } else {
-        MenuItem created =
-            MenuItem.builder()
-                .diningCommonsCode(diningCommonCode)
-                .mealCode(mealCode)
-                .station(selected.getStation())
-                .name(selected.getName())
-                .build();
-        menuItemRepository.save(created);
-        existingItems.add(created);
       }
+      MenuItem created =
+          MenuItem.builder()
+              .diningCommonsCode(diningCommonCode)
+              .mealCode(mealCode)
+              .station(selected.getStation())
+              .name(selected.getName())
+              .build();
+      menuItemRepository.save(created);
+      existingItems.add(created);
+      existingItemsMap.put(key, created); // don't save the same item twice from one list
     }
 
     return existingItems;

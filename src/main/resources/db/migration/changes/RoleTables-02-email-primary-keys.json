@@ -1,0 +1,93 @@
+{
+  "databaseChangeLog": [
+    {
+      "changeSet": {
+        "id": "RoleTables-02-email-primary-keys",
+        "author": "proj-dining",
+        "comment": "Use email as the role identity, preserving one row for each existing email.",
+        "preConditions": [
+          {
+            "onFail": "HALT",
+            "onFailMessage": "Role tables contain null emails. Repair these rows before migrating."
+          },
+          {
+            "sqlCheck": {
+              "expectedResult": "0",
+              "sql": "SELECT COUNT(*) FROM admins WHERE email IS NULL"
+            }
+          },
+          {
+            "sqlCheck": {
+              "expectedResult": "0",
+              "sql": "SELECT COUNT(*) FROM moderators WHERE email IS NULL"
+            }
+          }
+        ],
+        "changes": [
+          {
+            "sql": {
+              "sql": "DELETE FROM admins WHERE id NOT IN (SELECT MIN(id) FROM admins GROUP BY email)"
+            }
+          },
+          {
+            "dropPrimaryKey": {
+              "tableName": "admins",
+              "constraintName": "ADMINS_PK"
+            }
+          },
+          {
+            "dropColumn": {
+              "tableName": "admins",
+              "columnName": "ID"
+            }
+          },
+          {
+            "addNotNullConstraint": {
+              "tableName": "admins",
+              "columnName": "EMAIL",
+              "columnDataType": "VARCHAR(255)"
+            }
+          },
+          {
+            "addPrimaryKey": {
+              "tableName": "admins",
+              "columnNames": "EMAIL",
+              "constraintName": "ADMINS_PK"
+            }
+          },
+          {
+            "sql": {
+              "sql": "DELETE FROM moderators WHERE id NOT IN (SELECT MIN(id) FROM moderators GROUP BY email)"
+            }
+          },
+          {
+            "dropPrimaryKey": {
+              "tableName": "moderators",
+              "constraintName": "MODERATORS_PK"
+            }
+          },
+          {
+            "dropColumn": {
+              "tableName": "moderators",
+              "columnName": "ID"
+            }
+          },
+          {
+            "addNotNullConstraint": {
+              "tableName": "moderators",
+              "columnName": "EMAIL",
+              "columnDataType": "VARCHAR(255)"
+            }
+          },
+          {
+            "addPrimaryKey": {
+              "tableName": "moderators",
+              "columnNames": "EMAIL",
+              "constraintName": "MODERATORS_PK"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
